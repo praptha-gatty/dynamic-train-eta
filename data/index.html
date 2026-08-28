@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dynamic train ETA and delay forecasting dashboard">
+  <title>Railwise | Dynamic Train ETA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="#top" aria-label="Railwise home"><span class="brand-mark">R</span><span>Railwise</span></a><div id="connection-status" class="live-indicator"><span></span> Ready for a train search</div><button class="icon-button" type="button" aria-label="Open notifications">◉</button></header>
+  <main id="top" class="shell">
+    <section class="welcome-row"><div><p class="eyebrow">Train intelligence platform</p><h1>Know when your train<br><em>really</em> arrives.</h1><p class="intro">Enter a train number to view movement data, ETA forecasts, and its route on the map.</p></div><div class="date-stamp"><strong>LIVE ETA</strong><span>DATA CONNECTED</span></div></section>
+    <form id="search-form" class="search-panel" aria-label="Train search"><span class="search-icon">⌕</span><label for="train-search">Search train number</label><input id="train-search" type="search" placeholder="Enter train number, e.g. 12919" autocomplete="off"><button id="search-button" class="primary-button" type="submit">Find train <span>→</span></button></form>
+    <p id="search-message" class="search-message" role="status">Search for a train to load its latest available observations.</p>
+    <section id="dashboard" hidden>
+      <nav class="view-tabs" aria-label="Dashboard views"><a class="active" href="#overview">Overview</a><a href="#stations">Station ETA</a><a href="#timeline">Journey timeline</a><a href="#route-map">Live map</a></nav>
+      <section id="overview" class="section-heading"><div><p class="eyebrow">Selected journey</p><h2>Train status</h2></div><span id="train-status" class="status-pill"></span></section>
+      <section class="overview-grid">
+        <article class="train-card"><div class="card-top"><span class="train-badge">TRAIN</span><span id="last-updated" class="muted light"></span></div><div class="train-heading"><div><p id="train-number" class="train-number"></p><h3 id="train-name">Train journey</h3></div><div id="route-code" class="route-code"></div></div><div class="route-line"><div><strong id="origin-code">--</strong><small id="origin-name">Origin</small></div><div class="track"><span class="track-dot filled"></span><span class="track-fill"></span><span class="track-dot"></span></div><div class="align-right"><strong id="destination-code">--</strong><small id="destination-name">Destination</small></div></div><div class="card-footer"><span id="station-count"></span><span id="distance-total"></span><span id="journey-date"></span></div></article>
+        <article class="eta-card"><div class="card-top"><span class="eyebrow">Latest observation</span><span class="confidence">Data only</span></div><p id="eta-time" class="eta-time">--</p><p class="eta-label">Recorded at <strong id="eta-station">--</strong></p><div class="eta-compare"><span>Scheduled <b id="scheduled-time">--</b></span><span id="eta-delay" class="delay-text">--</span></div><p class="forecast-note">Prediction becomes available when a forecasting service is connected.</p></article>
+        <article class="delay-card"><div class="card-top"><span class="eyebrow">Recorded delay</span><span class="delay-icon">!</span></div><p id="delay-number" class="delay-number">-- <small>min</small></p><p class="delay-label">At <strong id="delay-station">--</strong></p><div class="delay-divider"></div><p class="delay-cause"><span class="cause-dot"></span><span id="delay-status">No status recorded</span></p></article>
+      </section>
+      <section class="content-grid"><article id="stations" class="panel station-panel"><div class="panel-heading"><div><p class="eyebrow">Processed observations</p><h2>Station-wise ETA</h2></div><span id="observation-count" class="muted"></span></div><div id="station-list" class="station-list"></div></article><div class="side-stack"><article class="panel explanation-panel"><div class="panel-heading"><div><p class="eyebrow">Data insight</p><h2>Delay context</h2></div><span class="spark">✦</span></div><p id="explanation" class="explanation-copy"></p><div class="factor"><span>Recorded delay</span><strong id="factor-delay">--</strong><i><b id="factor-delay-bar"></b></i></div><div class="factor"><span>Recorded speed</span><strong id="factor-speed">--</strong><i><b id="factor-speed-bar"></b></i></div></article><article class="panel metrics-panel"><div class="metric"><span>Latest speed</span><strong id="current-speed">--</strong></div><div class="metric"><span>Distance from origin</span><strong id="current-distance">--</strong></div><div class="metric"><span>Station code</span><strong id="current-code">--</strong></div></article></div></section>
+      <section id="route-map" class="panel map-panel"><div class="panel-heading"><div><p class="eyebrow">Movement overview</p><h2>Live route map</h2></div><span id="mapped-count" class="muted"></span></div><div class="map-frame" style="position:relative;height:390px;overflow:hidden;border-radius:6px;background:#dfeae6"><div id="route-map-view" style="height:100%;width:100%"></div><div id="map-empty" class="map-empty" hidden><strong>Map awaiting station coordinates</strong><span>Station progress is still available in the list below.</span></div><div class="map-legend"><span><i class="legend-dot teal"></i> Recorded station</span><span><i class="legend-dot coral"></i> Latest position</span></div></div></section>
+      <section id="timeline" class="panel timeline-panel"><div class="panel-heading"><div><p class="eyebrow">Recorded journey progress</p><h2>ETA timeline</h2></div><span id="timeline-date" class="muted"></span></div><div id="timeline-list" class="timeline"></div></section>
+    </section>
+  </main>
+  <footer><span>RAILWISE</span><span>Forecasts are estimates based on live movement data.</span><span>Data refreshes every 5 minutes</span></footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
