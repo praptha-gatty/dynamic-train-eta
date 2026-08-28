@@ -5,6 +5,7 @@
 
 # Node.js
 node_modules/
+data/dist/
 
 # Raw API responses
 data/raw/
