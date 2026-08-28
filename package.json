@@ -1,0 +1,30 @@
+{
+  "name": "dynamic-train-eta",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praptha-gatty/dynamic-train-eta.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/praptha-gatty/dynamic-train-eta/issues"
+  },
+  "homepage": "https://github.com/praptha-gatty/dynamic-train-eta#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "axios": "^1.20.0",
+    "csv-parse": "^7.0.2",
+    "dotenv": "^17.4.2"
+  }
+}

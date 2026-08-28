@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dynamic-train-eta-backend
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_PREFIX=/api/v1
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - RAILRADAR_API_KEY=${RAILRADAR_API_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
+      - WS_ENABLED=${WS_ENABLED}
+      - LOG_LEVEL=${LOG_LEVEL}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./logs:/app/logs
+
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: dynamic-train-eta-redis
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis_data:/data
+
+# volumes:
+#   redis_data:
