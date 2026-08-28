@@ -1,5 +1,5 @@
 import express from 'express';
-import { validateQuery, validateParams, trainNumberSchema, journeyDateSchema, paginationSchema } from '../validators/index.js';
+import { validateQuery, validateParams, trainNumberSchema, journeyDateSchema, paginationSchema, realTimeStatusQuerySchema, trainHistoryQuerySchema } from '../validators/index.js';
 import * as trainService from '../services/trainService.js';
 import logger from '../utils/logger.js';
 
@@ -63,7 +63,7 @@ router.get('/realtime/:trainNumber', validateParams(trainNumberSchema), validate
   }
 });
 
-router.get('/history', validateQuery(import('../validators/index.js').then(m => m.trainHistoryQuerySchema)), async (req, res, next) => {
+router.get('/history', validateQuery(trainHistoryQuerySchema), async (req, res, next) => {
   try {
     const filters = req.validatedQuery;
     const result = await trainService.getTrainHistory(filters);
@@ -114,5 +114,3 @@ router.get('/route/:trainNumber', validateParams(trainNumberSchema), validateQue
 });
 
 export default router;
-
-import { realTimeStatusQuerySchema } from '../validators/index.js';
