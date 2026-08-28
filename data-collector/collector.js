@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const axios = require("axios");
 const dotenv = require("dotenv");
+const stationMaster = require("./stationMaster");
 
 // ============================================================
 // LOAD ENVIRONMENT
@@ -138,6 +139,13 @@ function csvEscape(value) {
 // LOAD ACTIVE TRAINS
 // ============================================================
 
+function loadActiveTrains() {
+
+    if (!fs.existsSync(ACTIVE_TRAINS_FILE)) {
+
+        console.error(
+            "❌ active-trains.json not found."
+        );
 
         console.error(
             "Run:"
@@ -636,424 +644,205 @@ function buildRecords(
     data
 ) {
 
-    const route =
+    const rawRoute =
         Array.isArray(data.route)
             ? data.route
             : [];
 
-    // --------------------------------------------------------
-    // USE THE TRAIN NUMBER FROM THE API RESPONSE
-    //
-    // The API may return a different/corrected train number.
-    // Always trust the API over the hardcoded value.
-    // --------------------------------------------------------
-
-    const trainNumber =
+    const trainNumber = String(
         data.trainNumber ||
         data.train?.number ||
-        requestedTrainNumber;
+        requestedTrainNumber || ""
+    ).trim();
 
     if (trainNumber !== requestedTrainNumber) {
-
         console.log(
             `🔄 API returned train ${trainNumber}` +
             ` (requested ${requestedTrainNumber})`
         );
     }
 
-    if (!route.length) {
-
+    if (!rawRoute.length) {
         console.log(
             `⚠️ ${trainNumber}: route is empty`
         );
-
         return [];
     }
 
-    const train =
-        data.train || {};
+    const train = data.train || {};
+    const trainName = data.trainName || train.name || null;
+    const journeyDate = data.startDate || null;
+    const apiUpdatedAt = data.lastUpdatedAt || null;
 
-    const trainName =
-        data.trainName ||
-        train.name ||
-        null;
-
-    const journeyDate =
-        data.startDate ||
-        null;
-
-    const apiUpdatedAt =
-        data.lastUpdatedAt ||
-        null;
+    // Current train location snapshot from API
+    const current = getCurrentStation(data);
 
     // --------------------------------------------------------
-    // FETCH STATION CITY & STATE
+    // ENSURE ROUTE IS SORTED STRICTLY BY STATION SEQUENCE ASCENDING
     // --------------------------------------------------------
-    const stationInfoCache = {};
-
-    async function fetchStationInfo(stationCode) {
-        if (!stationCode) return { city: null, state: null };
-        if (stationInfoCache[stationCode]) {
-            return stationInfoCache[stationCode];
-        }
-        try {
-            const response = await axios.get(
-                `https://railradar.in/api/v1/lookup/search/stations?q=${stationCode}&limit=1`,
-                { headers: { Authorization: `Bearer ${RAILRADAR_API_KEY}` } }
-            );
-            const result = response.data?.data?.[0] || {};
-            const info = {
-                city: result.city || null,
-                // RailRadar may not provide a separate state field; if not, leave as null
-                state: result.state || null
-            };
-            stationInfoCache[stationCode] = info;
-            return info;
-        } catch (e) {
-            console.warn(`⚠️ Unable to fetch station info for ${stationCode}: ${e.message}`);
-            const fallback = { city: null, state: null };
-            stationInfoCache[stationCode] = fallback;
-            return fallback;
-        }
-    }
-
-    // --------------------------------------------------------
-    // CURRENT LOCATION
-    // --------------------------------------------------------
-
-    const current =
-        getCurrentStation(data);
-
-    // --------------------------------------------------------
-    // LOCATE CURRENT ROUTE STATION
-    // --------------------------------------------------------
-
-    const currentRouteStation =
-        findRouteStation(
-            route,
-            current.sequence,
-            current.code
-        );
-
-    // --------------------------------------------------------
-    // NEXT STATION
-    // --------------------------------------------------------
-
-    const apiNextHalt =
-        data.nextHalt || {};
-
-    const routeNextStation =
-        findNextRouteStation(
-            route,
-            current.sequence
-        );
-
-    const nextStationCode =
-        apiNextHalt.stationCode ||
-        routeNextStation?.stationCode ||
-        null;
-
-    const nextStationName =
-        apiNextHalt.stationName ||
-        routeNextStation?.stationName ||
-        null;
-
-    const nextStationSequence =
-        toNumber(
-            apiNextHalt.sequence
-        ) ??
-        toNumber(
-            routeNextStation?.sequence
-        );
-
-    // --------------------------------------------------------
-    // PREVIOUS STATION
-    // --------------------------------------------------------
-
-    const previousHalt =
-        data.previousHalt || {};
-
-    const previousStation =
-        previousHalt.stationName ||
-        null;
-
-    // --------------------------------------------------------
-    // TOTAL DISTANCE
-    // --------------------------------------------------------
-
-    const totalDistance =
-        toNumber(
-            train.distance
-        );
-
-    // --------------------------------------------------------
-    // CAPTURE TIME
-    // --------------------------------------------------------
-
-    const capturedAt =
-        new Date().toISOString();
-
-    const timeFeatures =
-        getTimeFeatures(
-            capturedAt
-        );
-
-    // --------------------------------------------------------
-                        current.sequence !== null &&
-                        sequence === current.sequence
-                    ) ||
-                    (
-                        current.code &&
-                        stationCode &&
-                        String(current.code).trim() ===
-                        String(stationCode).trim()
-                    );
-
-                const arrivalDelay =
-                    toNumber(
-                        station.delayArrival
-                    );
-
-                const departureDelay =
-                    toNumber(
-                        station.delayDeparture
-                    );
-
-                // ------------------------------------------------
-                // COMPUTE INDIVIDUAL ARRIVAL & DEPARTURE DELAYS
-                // ------------------------------------------------
-
-                let computedArrivalDelay = null;
-                if (station.actualArrival && station.scheduledArrival) {
-                    const actualMs = new Date(station.actualArrival).getTime();
-                    const scheduledMs = new Date(station.scheduledArrival).getTime();
-                    if (!isNaN(actualMs) && !isNaN(scheduledMs)) {
-                        computedArrivalDelay = Math.round((actualMs - scheduledMs) / 60000);
-                    }
-                }
-
-                let computedDepartureDelay = null;
-                if (station.actualDeparture && station.scheduledDeparture) {
-                    const actualMs = new Date(station.actualDeparture).getTime();
-                    const scheduledMs = new Date(station.scheduledDeparture).getTime();
-                    if (!isNaN(actualMs) && !isNaN(scheduledMs)) {
-                        computedDepartureDelay = Math.round((actualMs - scheduledMs) / 60000);
-                    }
-                }
-
-                const computedDelay = computedArrivalDelay ?? computedDepartureDelay;
-
-                // Live current delay from train location
-                const currentDelay = current.delay ?? toNumber(data.delayMinutes) ?? 0;
-
-                // Resolve specific arrival and departure delays
-                const resolvedArrivalDelay =
-                    arrivalDelay !== null
-                        ? arrivalDelay
-                        : computedArrivalDelay !== null
-                            ? computedArrivalDelay
-                            : departureDelay !== null
-                                ? departureDelay
-                                : (station.status === "departed" || station.status === "arrived")
-                                    ? currentDelay
-                                    : null;
-
-                const resolvedDepartureDelay =
-                    departureDelay !== null
-                        ? departureDelay
-                        : computedDepartureDelay !== null
-                            ? computedDepartureDelay
-                            : arrivalDelay !== null
-                                ? arrivalDelay
-                                : station.status === "departed"
-                                    ? currentDelay
-                                    : null;
-
-                // Priority: explicit station arrival/departure delay > computed > live current delay
-                const delayMinutes =
-                    arrivalDelay !== null
-                        ? arrivalDelay
-                        : departureDelay !== null
-                            ? departureDelay
-                            : computedDelay !== null
-                                ? computedDelay
-                                : (isCurrent || station.status === "departed" || station.status === "arrived")
-                                    ? currentDelay
-                                    : (station.status === "upcoming" ? currentDelay : null);
-
-                const distance =
-                    toNumber(
-                        station.distance
-                    );
-
-                const speed =
-                    toNumber(
-                        station.speedToNextStationKmph
-                    );
-
-                let distanceRemaining = null;
-
-                if (
-                    distance !== null &&
-                    totalDistance !== null &&
-                    totalDistance >= distance
-                ) {
-
-                    distanceRemaining =
-                        Number(
-                            (
-                                totalDistance -
-                                distance
-                            ).toFixed(2)
-                        );
-                }
-
-                // ------------------------------------------------
-                // LIVE TRAIN LOCATION CONTEXT AT CAPTURE TIME
-                // ------------------------------------------------
-
-                const resolvedPrevious =
-                    previousStation ||
-                    null;
-
-                const resolvedCurrent =
-                    current.name ||
-                    current.code ||
-                    (isCurrent ? stationName : null);
-
-                const resolvedNext =
-                    nextStationName ||
-                    null;
-
-                const resolvedNextCode =
-                    nextStationCode ||
-                    null;
-
-                const resolvedNextSequence =
-                    nextStationSequence ??
-                    null;
-
-                const resolvedDistanceFromLast =
-                    isCurrent
-                        ? current.distanceFromLastStation
-                        : null;
-
-                // ------------------------------------------------
-                // STATUS
-                // ------------------------------------------------
-
-                const stationStatus =
-                    station.status ||
-                    null;
-
-                const runningStatus =
-                    data.status ||
-                    (isCurrent ? station.status : null) ||
-                    null;
-
-                const isHalt =
-                    toBoolean(
-                        station.isHalt
-                    );
-
-                return {
-
-                    train_number:
-                        trainNumber,
-
-                    train_name:
-                        trainName,
-
-                    journey_date:
-                        journeyDate,
-
-                    station_sequence:
-                        sequence,
-
-                    station_code:
-                        stationCode,
-
-                    station_name:
-                        stationName,
-
-                    scheduled_arrival:
-                        station.scheduledArrival ||
-                        null,
-
-                    actual_arrival:
-                        station.actualArrival ||
-                        null,
-
-                    scheduled_departure:
-                        station.scheduledDeparture ||
-                        null,
-
-                    actual_departure:
-                        station.actualDeparture ||
-                        null,
-
-                    arrival_delay_minutes:
-                        resolvedArrivalDelay,
-
-                    departure_delay_minutes:
-                        resolvedDepartureDelay,
-
-                    delay_minutes:
-                        delayMinutes,
-
-                    distance_from_origin_km:
-                        distance,
-
-                    distance_from_last_station_km:
-                        resolvedDistanceFromLast,
-
-                    distance_remaining_km:
-                        distanceRemaining,
-
-                    speed_kmph:
-                        speed,
-
-                    previous_station:
-                        resolvedPrevious,
-
-                    current_station:
-                        resolvedCurrent,
-
-                    is_current_location:
-                        isCurrent,
-
-                    next_station:
-                        resolvedNext,
-
-                    next_station_code:
-                        resolvedNextCode,
-
-                    next_station_sequence:
-                        resolvedNextSequence,
-
-                    station_status:
-                        stationStatus,
-
-                    running_status:
-                        runningStatus,
-
-                    is_halt:
-                        isHalt,
-
-                    captured_at:
-                        capturedAt,
-
-                    api_updated_at:
-                        apiUpdatedAt,
-
-                    ...timeFeatures
-                };
+    const route = [...rawRoute]
+        .filter(s => s && (s.stationCode || s.stationName))
+        .sort((a, b) => {
+            const seqA = toNumber(a.sequence) ?? 0;
+            const seqB = toNumber(b.sequence) ?? 0;
+            return seqA - seqB;
+        });
+
+    const totalDistance = toNumber(train.distance);
+    const capturedAt = new Date().toISOString();
+    const timeFeatures = getTimeFeatures(capturedAt);
+
+    // Live current delay from train location
+    const currentDelay = current.delay ?? toNumber(data.delayMinutes) ?? 0;
+
+    const records = route.map((station, index) => {
+        const sequence = toNumber(station.sequence) ?? (index + 1);
+        const stationCode = station.stationCode ? String(station.stationCode).trim().toUpperCase() : null;
+        const stationName = station.stationName ? String(station.stationName).trim() : (stationCode || "Unknown");
+
+        // --------------------------------------------------------
+        // NEXT STATION FROM ORDERED ROUTE: index i -> index i + 1
+        // Only final destination (index === route.length - 1) is null
+        // --------------------------------------------------------
+        const nextRouteStation = index < route.length - 1 ? route[index + 1] : null;
+        const nextStationName = nextRouteStation
+            ? (nextRouteStation.stationName ? String(nextRouteStation.stationName).trim() : (nextRouteStation.stationCode || null))
+            : null;
+        const nextStationCode = nextRouteStation
+            ? (nextRouteStation.stationCode ? String(nextRouteStation.stationCode).trim().toUpperCase() : null)
+            : null;
+        const nextStationSequence = nextRouteStation
+            ? (toNumber(nextRouteStation.sequence) ?? (index + 2))
+            : null;
+
+        // --------------------------------------------------------
+        // PREVIOUS STATION FROM ORDERED ROUTE: index i -> index i - 1
+        // Origin station (index === 0) is null
+        // --------------------------------------------------------
+        const prevRouteStation = index > 0 ? route[index - 1] : null;
+        const previousStationName = prevRouteStation
+            ? (prevRouteStation.stationName ? String(prevRouteStation.stationName).trim() : (prevRouteStation.stationCode || null))
+            : null;
+
+        // --------------------------------------------------------
+        // VALIDATED LOCATION & COORDINATES FROM STATION MASTER
+        // --------------------------------------------------------
+        const stationInfo = stationMaster.getStationInfo(stationCode, stationName);
+
+        const isCurrent =
+            (current.sequence !== null && sequence === current.sequence) ||
+            (current.code && stationCode && String(current.code).trim().toUpperCase() === stationCode);
+
+        const arrivalDelay = toNumber(station.delayArrival);
+        const departureDelay = toNumber(station.delayDeparture);
+
+        let computedArrivalDelay = null;
+        if (station.actualArrival && station.scheduledArrival) {
+            const actualMs = new Date(station.actualArrival).getTime();
+            const scheduledMs = new Date(station.scheduledArrival).getTime();
+            if (!isNaN(actualMs) && !isNaN(scheduledMs)) {
+                computedArrivalDelay = Math.round((actualMs - scheduledMs) / 60000);
             }
-        );
+        }
 
-    return removeSnapshotDuplicates(
-        records
-    );
+        let computedDepartureDelay = null;
+        if (station.actualDeparture && station.scheduledDeparture) {
+            const actualMs = new Date(station.actualDeparture).getTime();
+            const scheduledMs = new Date(station.scheduledDeparture).getTime();
+            if (!isNaN(actualMs) && !isNaN(scheduledMs)) {
+                computedDepartureDelay = Math.round((actualMs - scheduledMs) / 60000);
+            }
+        }
+
+        const computedDelay = computedArrivalDelay ?? computedDepartureDelay;
+
+        const resolvedArrivalDelay =
+            arrivalDelay !== null
+                ? arrivalDelay
+                : computedArrivalDelay !== null
+                    ? computedArrivalDelay
+                    : departureDelay !== null
+                        ? departureDelay
+                        : (station.status === "departed" || station.status === "arrived")
+                            ? currentDelay
+                            : null;
+
+        const resolvedDepartureDelay =
+            departureDelay !== null
+                ? departureDelay
+                : computedDepartureDelay !== null
+                    ? computedDepartureDelay
+                    : arrivalDelay !== null
+                        ? arrivalDelay
+                        : station.status === "departed"
+                            ? currentDelay
+                            : null;
+
+        const delayMinutes =
+            arrivalDelay !== null
+                ? arrivalDelay
+                : departureDelay !== null
+                    ? departureDelay
+                    : computedDelay !== null
+                        ? computedDelay
+                        : (isCurrent || station.status === "departed" || station.status === "arrived")
+                            ? currentDelay
+                            : (station.status === "upcoming" ? currentDelay : null);
+
+        const distance = toNumber(station.distance);
+        const speed = toNumber(station.speedToNextStationKmph);
+
+        let distanceRemaining = null;
+        if (distance !== null && totalDistance !== null && totalDistance >= distance) {
+            distanceRemaining = Number((totalDistance - distance).toFixed(2));
+        }
+
+        const resolvedDistanceFromLast = isCurrent
+            ? current.distanceFromLastStation
+            : null;
+
+        const stationStatus = station.status || null;
+        const runningStatus = data.status || (isCurrent ? station.status : null) || null;
+        const isHalt = toBoolean(station.isHalt);
+
+        return {
+            train_number: trainNumber,
+            train_name: trainName,
+            journey_date: journeyDate,
+            station_sequence: sequence,
+            station_code: stationCode,
+            station_name: stationName,
+            city: stationInfo.city,
+            state: stationInfo.state,
+            latitude: stationInfo.latitude,
+            longitude: stationInfo.longitude,
+            scheduled_arrival: station.scheduledArrival || null,
+            actual_arrival: station.actualArrival || null,
+            scheduled_departure: station.scheduledDeparture || null,
+            actual_departure: station.actualDeparture || null,
+            arrival_delay_minutes: resolvedArrivalDelay,
+            departure_delay_minutes: resolvedDepartureDelay,
+            delay_minutes: delayMinutes,
+            distance_from_origin_km: distance,
+            distance_from_last_station_km: resolvedDistanceFromLast,
+            distance_remaining_km: distanceRemaining,
+            speed_kmph: speed,
+            previous_station: previousStationName,
+            current_station: stationName,
+            is_current_location: isCurrent,
+            next_station: nextStationName,
+            next_station_code: nextStationCode,
+            next_station_sequence: nextStationSequence,
+            station_status: stationStatus,
+            running_status: runningStatus,
+            is_halt: isHalt,
+            captured_at: capturedAt,
+            api_updated_at: apiUpdatedAt,
+            ...timeFeatures
+        };
+    });
+
+    return removeSnapshotDuplicates(records);
 }
 
 // ============================================================
@@ -1089,9 +878,6 @@ async function insertIntoSupabase(
             station_code:
                 record.station_code,
 
-            station_name:
-                record.station_name,
-
             station_sequence:
                 record.station_sequence,
 
@@ -1126,10 +912,10 @@ async function insertIntoSupabase(
                 record.departure_delay_minutes,
 
             latitude:
-                null,
+                record.latitude,
 
             longitude:
-                null,
+                record.longitude,
 
             speed_kmph:
                 record.speed_kmph,
@@ -1146,14 +932,8 @@ async function insertIntoSupabase(
             running_status:
                 record.running_status,
 
-            station_status:
-                record.station_status,
-
             is_halt:
                 record.is_halt,
-
-            is_current_location:
-                record.is_current_location ?? false,
 
             captured_at:
                 record.captured_at,
@@ -1163,10 +943,8 @@ async function insertIntoSupabase(
         }));
 
     // --------------------------------------------------------
-    // IMPORTANT:
-    //
-    // Use upsert to guarantee snapshot idempotency and avoid
-    // duplicate historical observations.
+    // Insert snapshot rows. Duplicates within a single run are
+    // already removed by removeSnapshotDuplicates() above.
     // --------------------------------------------------------
 
     const {
@@ -1174,13 +952,7 @@ async function insertIntoSupabase(
     } =
         await supabase
             .from("train_history")
-            .upsert(
-                supabaseRecords,
-                {
-                    onConflict: "train_number,journey_date,station_sequence,captured_at",
-                    ignoreDuplicates: true
-                }
-            );
+            .insert(supabaseRecords);
 
     if (error) {
 
@@ -1204,6 +976,39 @@ async function insertIntoSupabase(
     }
 
     return supabaseRecords.length;
+}
+
+// ============================================================
+// UPSERT STATIONS TO SUPABASE
+// ============================================================
+
+async function upsertStationsToSupabase(records) {
+    if (!records || !records.length) return;
+
+    const stationMap = new Map();
+    for (const r of records) {
+        if (r.station_code && !stationMap.has(r.station_code)) {
+            stationMap.set(r.station_code, {
+                station_code: r.station_code,
+                station_name: r.station_name,
+                city: r.city || null,
+                state: r.state || null,
+                latitude: r.latitude !== null && r.latitude !== undefined ? Number(r.latitude) : null,
+                longitude: r.longitude !== null && r.longitude !== undefined ? Number(r.longitude) : null
+            });
+        }
+    }
+
+    const uniqueStations = Array.from(stationMap.values());
+    if (!uniqueStations.length) return;
+
+    try {
+        await supabase
+            .from("stations")
+            .upsert(uniqueStations, { onConflict: "station_code" });
+    } catch (e) {
+        // background sync note
+    }
 }
 
 // ============================================================
@@ -1471,6 +1276,11 @@ async function collectTrainData(
             await insertIntoSupabase(
                 records
             );
+
+        // Sync stations master table in Supabase
+        await upsertStationsToSupabase(
+            records
+        );
 
         // ----------------------------------------------------
         // CURRENT INFO

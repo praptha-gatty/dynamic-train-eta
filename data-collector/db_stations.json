@@ -1,0 +1,894 @@
+[
+  {
+    "station_code": "AEH",
+    "station_name": "Anant Paith"
+  },
+  {
+    "station_code": "AGC",
+    "station_name": "Agra Cantt Jn"
+  },
+  {
+    "station_code": "AGD",
+    "station_name": "Agasod"
+  },
+  {
+    "station_code": "AJH",
+    "station_name": "Ajhai"
+  },
+  {
+    "station_code": "AKD",
+    "station_name": "Akodia"
+  },
+  {
+    "station_code": "AMIN",
+    "station_name": "Amin"
+  },
+  {
+    "station_code": "ANDI",
+    "station_name": "Adarsh Nagar Delhi"
+  },
+  {
+    "station_code": "ARI",
+    "station_name": "Antri"
+  },
+  {
+    "station_code": "AST",
+    "station_name": "Asaoti"
+  },
+  {
+    "station_code": "AWL",
+    "station_name": "Alawalpur"
+  },
+  {
+    "station_code": "BAB",
+    "station_name": "Babina"
+  },
+  {
+    "station_code": "BAD",
+    "station_name": "Bad"
+  },
+  {
+    "station_code": "BAO",
+    "station_name": "Banmor"
+  },
+  {
+    "station_code": "BAQ",
+    "station_name": "Ganj Basoda"
+  },
+  {
+    "station_code": "BBDE",
+    "station_name": "Babarpur"
+  },
+  {
+    "station_code": "BBMN",
+    "station_name": "Bari Brahman"
+  },
+  {
+    "station_code": "BCH",
+    "station_name": "Berchha"
+  },
+  {
+    "station_code": "BDHY",
+    "station_name": "Budhi"
+  },
+  {
+    "station_code": "BDMJ",
+    "station_name": "Bhodwal Majri"
+  },
+  {
+    "station_code": "BET",
+    "station_name": "Bareth"
+  },
+  {
+    "station_code": "BFP",
+    "station_name": "Bilochpura"
+  },
+  {
+    "station_code": "BHA",
+    "station_name": "Bhandai Jn"
+  },
+  {
+    "station_code": "BHD",
+    "station_name": "Badli"
+  },
+  {
+    "station_code": "BHOI",
+    "station_name": "Dhandarikalan Block Hut (Bhoi)"
+  },
+  {
+    "station_code": "BHRL",
+    "station_name": "Bharoli Jn"
+  },
+  {
+    "station_code": "BHS",
+    "station_name": "Vidisha"
+  },
+  {
+    "station_code": "BINA",
+    "station_name": "Bina Jn"
+  },
+  {
+    "station_code": "BJA",
+    "station_name": "Bijrotha"
+  },
+  {
+    "station_code": "BJI",
+    "station_name": "Bijauli"
+  },
+  {
+    "station_code": "BKTL",
+    "station_name": "Baktal"
+  },
+  {
+    "station_code": "BLA",
+    "station_name": "Bajalta"
+  },
+  {
+    "station_code": "BLAX",
+    "station_name": "Barlai"
+  },
+  {
+    "station_code": "BLNR",
+    "station_name": "Birlanagar"
+  },
+  {
+    "station_code": "BLX",
+    "station_name": "Bolai"
+  },
+  {
+    "station_code": "BNCR",
+    "station_name": "Banchari"
+  },
+  {
+    "station_code": "BNGL",
+    "station_name": "Bhangala"
+  },
+  {
+    "station_code": "BNJN",
+    "station_name": "Binjana"
+  },
+  {
+    "station_code": "BPL",
+    "station_name": "Bhopal Jn"
+  },
+  {
+    "station_code": "BPRS",
+    "station_name": "Bhogpur Sirwal"
+  },
+  {
+    "station_code": "BPW",
+    "station_name": "Burhpura"
+  },
+  {
+    "station_code": "BQE",
+    "station_name": "Bakanian Bhaunri"
+  },
+  {
+    "station_code": "BTSR",
+    "station_name": "Bhuteshwar"
+  },
+  {
+    "station_code": "BTTN",
+    "station_name": "Bhatian"
+  },
+  {
+    "station_code": "BVB",
+    "station_name": "Bhadbhadaghat"
+  },
+  {
+    "station_code": "BVH",
+    "station_name": "Ballabgarh"
+  },
+  {
+    "station_code": "BZJT",
+    "station_name": "Bazida Jatan"
+  },
+  {
+    "station_code": "BZK",
+    "station_name": "Bhaini Khurd"
+  },
+  {
+    "station_code": "BZY",
+    "station_name": "Basai"
+  },
+  {
+    "station_code": "CEU",
+    "station_name": "Chiheru"
+  },
+  {
+    "station_code": "CGH",
+    "station_name": "Cholang"
+  },
+  {
+    "station_code": "CHA",
+    "station_name": "Chawapall"
+  },
+  {
+    "station_code": "CHJ",
+    "station_name": "Chata"
+  },
+  {
+    "station_code": "CHNR",
+    "station_name": "Chhan Arorian"
+  },
+  {
+    "station_code": "CIRL",
+    "station_name": "Chirula"
+  },
+  {
+    "station_code": "CKDL",
+    "station_name": "Chakdayala"
+  },
+  {
+    "station_code": "CKOD",
+    "station_name": "Chakrod"
+  },
+  {
+    "station_code": "CLHT",
+    "station_name": "Chulheta"
+  },
+  {
+    "station_code": "CRWL",
+    "station_name": "Chakrakwala"
+  },
+  {
+    "station_code": "CSB",
+    "station_name": "Shivaji Bridge"
+  },
+  {
+    "station_code": "DAA",
+    "station_name": "Datia"
+  },
+  {
+    "station_code": "DADN",
+    "station_name": "Dr. Ambedkar Nagar"
+  },
+  {
+    "station_code": "DAZ",
+    "station_name": "Delhi Azadpur"
+  },
+  {
+    "station_code": "DBA",
+    "station_name": "Dabra"
+  },
+  {
+    "station_code": "DDDM",
+    "station_name": "Deen Dayal Dham"
+  },
+  {
+    "station_code": "DDL",
+    "station_name": "Dhandari Kalan"
+  },
+  {
+    "station_code": "DHKR",
+    "station_name": "Dhoda Khedi"
+  },
+  {
+    "station_code": "DHMZ",
+    "station_name": "Dhola Mazra"
+  },
+  {
+    "station_code": "DHO",
+    "station_name": "Dhaulpur"
+  },
+  {
+    "station_code": "DOA",
+    "station_name": "Doraha"
+  },
+  {
+    "station_code": "DPP",
+    "station_name": "Dhirpur"
+  },
+  {
+    "station_code": "DSB",
+    "station_name": "Sadar Bazar"
+  },
+  {
+    "station_code": "DUA",
+    "station_name": "Dhaura"
+  },
+  {
+    "station_code": "DWA",
+    "station_name": "Dailwara"
+  },
+  {
+    "station_code": "DWG",
+    "station_name": "Dewanganj"
+  },
+  {
+    "station_code": "DWNA",
+    "station_name": "Diwana"
+  },
+  {
+    "station_code": "DWX",
+    "station_name": "Dewas"
+  },
+  {
+    "station_code": "DZA",
+    "station_name": "Dasuya"
+  },
+  {
+    "station_code": "FAR",
+    "station_name": "Farah"
+  },
+  {
+    "station_code": "FDB",
+    "station_name": "Faridabad"
+  },
+  {
+    "station_code": "FDN",
+    "station_name": "Faridabad Nw Tn"
+  },
+  {
+    "station_code": "GHGL",
+    "station_name": "Ghagwal"
+  },
+  {
+    "station_code": "GILA",
+    "station_name": "Ghiala"
+  },
+  {
+    "station_code": "GLG",
+    "station_name": "Gulabhganj"
+  },
+  {
+    "station_code": "GNU",
+    "station_name": "Ganaur"
+  },
+  {
+    "station_code": "GRA",
+    "station_name": "Gharaunda"
+  },
+  {
+    "station_code": "GRY",
+    "station_name": "Goraya"
+  },
+  {
+    "station_code": "GSB",
+    "station_name": "Garna Sahib"
+  },
+  {
+    "station_code": "GVG",
+    "station_name": "Govindgarh"
+  },
+  {
+    "station_code": "GWL",
+    "station_name": "Gwalior Jn"
+  },
+  {
+    "station_code": "HDL",
+    "station_name": "Hodal"
+  },
+  {
+    "station_code": "HET",
+    "station_name": "Hetampur"
+  },
+  {
+    "station_code": "HKH",
+    "station_name": "Haranya Kheri"
+  },
+  {
+    "station_code": "HNN",
+    "station_name": "Harana Kalan"
+  },
+  {
+    "station_code": "HRNR",
+    "station_name": "Hira Nagar"
+  },
+  {
+    "station_code": "HUK",
+    "station_name": "Holambi Kalan"
+  },
+  {
+    "station_code": "INDB",
+    "station_name": "Indore Jn"
+  },
+  {
+    "station_code": "JAT",
+    "station_name": "Jammutavi"
+  },
+  {
+    "station_code": "JBX",
+    "station_name": "Jabri"
+  },
+  {
+    "station_code": "JHA",
+    "station_name": "Jakhaura"
+  },
+  {
+    "station_code": "JJ",
+    "station_name": "Jajau"
+  },
+  {
+    "station_code": "JLN",
+    "station_name": "Jakhalaun"
+  },
+  {
+    "station_code": "JRC",
+    "station_name": "Jalandhar Cantt"
+  },
+  {
+    "station_code": "JRO",
+    "station_name": "Jiron"
+  },
+  {
+    "station_code": "KAH",
+    "station_name": "Kalhar"
+  },
+  {
+    "station_code": "KDHA",
+    "station_name": "Karchha"
+  },
+  {
+    "station_code": "KFU",
+    "station_name": "Kohand"
+  },
+  {
+    "station_code": "KHJ",
+    "station_name": "Khajraha"
+  },
+  {
+    "station_code": "KHKN",
+    "station_name": "Khera Kalan"
+  },
+  {
+    "station_code": "KIKA",
+    "station_name": "Kurwai Kethora"
+  },
+  {
+    "station_code": "KKDE",
+    "station_name": "Kurukshetra Jn"
+  },
+  {
+    "station_code": "KKL",
+    "station_name": "Kala Bakra"
+  },
+  {
+    "station_code": "KNDI",
+    "station_name": "Kandrori"
+  },
+  {
+    "station_code": "KNN",
+    "station_name": "Khanna"
+  },
+  {
+    "station_code": "KOA",
+    "station_name": "Karonda"
+  },
+  {
+    "station_code": "KONY",
+    "station_name": "Kisoni"
+  },
+  {
+    "station_code": "KPP",
+    "station_name": "Kalapipal"
+  },
+  {
+    "station_code": "KRQ",
+    "station_name": "Karari"
+  },
+  {
+    "station_code": "KSH",
+    "station_name": "Kali Sindh"
+  },
+  {
+    "station_code": "KSV",
+    "station_name": "Kosi Kalan"
+  },
+  {
+    "station_code": "KTRA",
+    "station_name": "Kotra"
+  },
+  {
+    "station_code": "KUN",
+    "station_name": "Karnal"
+  },
+  {
+    "station_code": "KXM",
+    "station_name": "Kitham"
+  },
+  {
+    "station_code": "KZX",
+    "station_name": "Khudda Korala"
+  },
+  {
+    "station_code": "LAR",
+    "station_name": "Lalitpur"
+  },
+  {
+    "station_code": "LDH",
+    "station_name": "Ludhiana Jn"
+  },
+  {
+    "station_code": "LDW",
+    "station_name": "Ladhowal"
+  },
+  {
+    "station_code": "LKMN",
+    "station_name": "Lokmanya Nagar"
+  },
+  {
+    "station_code": "LMNR",
+    "station_name": "Lakshmibai Ngr"
+  },
+  {
+    "station_code": "MABA",
+    "station_name": "Mandi Bamora"
+  },
+  {
+    "station_code": "MAUL",
+    "station_name": "Mauli Block Hut"
+  },
+  {
+    "station_code": "MCTM",
+    "station_name": "MCTM Udhampur"
+  },
+  {
+    "station_code": "MDPB",
+    "station_name": "Madhopur Punjab"
+  },
+  {
+    "station_code": "MEX",
+    "station_name": "Mukerian"
+  },
+  {
+    "station_code": "MGG",
+    "station_name": "Mangliya Gaon"
+  },
+  {
+    "station_code": "MIA",
+    "station_name": "Mania"
+  },
+  {
+    "station_code": "MKC",
+    "station_name": "Maksi Jn"
+  },
+  {
+    "station_code": "MNWL",
+    "station_name": "Manwal"
+  },
+  {
+    "station_code": "MOY",
+    "station_name": "Mohri"
+  },
+  {
+    "station_code": "MQE",
+    "station_name": "Mohammadkhera"
+  },
+  {
+    "station_code": "MRA",
+    "station_name": "Morena"
+  },
+  {
+    "station_code": "MRTL",
+    "station_name": "Mirthal"
+  },
+  {
+    "station_code": "MSKT",
+    "station_name": "Martyr Cptn Sunil Kr Choudhary Kathua"
+  },
+  {
+    "station_code": "MTJ",
+    "station_name": "Mathura Jn"
+  },
+  {
+    "station_code": "MXS",
+    "station_name": "Mohasa"
+  },
+  {
+    "station_code": "MZX",
+    "station_name": "Matatila"
+  },
+  {
+    "station_code": "NDLS",
+    "station_name": "New Delhi"
+  },
+  {
+    "station_code": "NLKR",
+    "station_name": "Nilokheri"
+  },
+  {
+    "station_code": "NRGR",
+    "station_name": "Naranjipur"
+  },
+  {
+    "station_code": "NSZ",
+    "station_name": "Nishatpura"
+  },
+  {
+    "station_code": "NUB",
+    "station_name": "Nurabad"
+  },
+  {
+    "station_code": "NUR",
+    "station_name": "Narela"
+  },
+  {
+    "station_code": "NZM",
+    "station_name": "Hazrat Nizamuddin Jn"
+  },
+  {
+    "station_code": "OKA",
+    "station_name": "Okhla"
+  },
+  {
+    "station_code": "PAI",
+    "station_name": "Pabai"
+  },
+  {
+    "station_code": "PGW",
+    "station_name": "Phagwara Jn"
+  },
+  {
+    "station_code": "PHR",
+    "station_name": "Phillaur Jn"
+  },
+  {
+    "station_code": "PLW",
+    "station_name": "Pingleshwar"
+  },
+  {
+    "station_code": "PNP",
+    "station_name": "Panipat Jn"
+  },
+  {
+    "station_code": "PNWN",
+    "station_name": "Pachwan"
+  },
+  {
+    "station_code": "PRB",
+    "station_name": "Parbati"
+  },
+  {
+    "station_code": "PTKC",
+    "station_name": "Pathankot Cantt"
+  },
+  {
+    "station_code": "PUD",
+    "station_name": "Phanda"
+  },
+  {
+    "station_code": "PUO",
+    "station_name": "Pir Umrod"
+  },
+  {
+    "station_code": "PWL",
+    "station_name": "Palwal"
+  },
+  {
+    "station_code": "RAU",
+    "station_name": "Rau"
+  },
+  {
+    "station_code": "RDDE",
+    "station_name": "Rathdhana"
+  },
+  {
+    "station_code": "RDE",
+    "station_name": "Rundhi"
+  },
+  {
+    "station_code": "RJQ",
+    "station_name": "Rajendranagar"
+  },
+  {
+    "station_code": "RKM",
+    "station_name": "Raja ki Mandi Jn"
+  },
+  {
+    "station_code": "RMJK",
+    "station_name": "Ram Nagar"
+  },
+  {
+    "station_code": "RNKA",
+    "station_name": "Runkuta"
+  },
+  {
+    "station_code": "RPJ",
+    "station_name": "Rajpura Jn"
+  },
+  {
+    "station_code": "RRU",
+    "station_name": "Rayaru"
+  },
+  {
+    "station_code": "RUG",
+    "station_name": "Rajlu Garhi"
+  },
+  {
+    "station_code": "SANK",
+    "station_name": "Sank"
+  },
+  {
+    "station_code": "SBJ",
+    "station_name": "Sarai Banjara"
+  },
+  {
+    "station_code": "SCI",
+    "station_name": "Sanchi"
+  },
+  {
+    "station_code": "SCPD",
+    "station_name": "Suchipind"
+  },
+  {
+    "station_code": "SDY",
+    "station_name": "Sadhoo Garh"
+  },
+  {
+    "station_code": "SEH",
+    "station_name": "Sehore"
+  },
+  {
+    "station_code": "SFNR",
+    "station_name": "Saifinagar Halt"
+  },
+  {
+    "station_code": "SGRR",
+    "station_name": "Sanger"
+  },
+  {
+    "station_code": "SHDM",
+    "station_name": "Shahbad Marknda"
+  },
+  {
+    "station_code": "SHLK",
+    "station_name": "Sholaka"
+  },
+  {
+    "station_code": "SHRN",
+    "station_name": "Sant Hirdaram Nagar Jn"
+  },
+  {
+    "station_code": "SIKD",
+    "station_name": "Sikroda Kwanri"
+  },
+  {
+    "station_code": "SIR",
+    "station_name": "Sirhind Jn"
+  },
+  {
+    "station_code": "SJNP",
+    "station_name": "Sujanpur"
+  },
+  {
+    "station_code": "SJP",
+    "station_name": "Shujalpur"
+  },
+  {
+    "station_code": "SLKN",
+    "station_name": "Sandal Kalan"
+  },
+  {
+    "station_code": "SLV",
+    "station_name": "Sandalpur"
+  },
+  {
+    "station_code": "SMBX",
+    "station_name": "Samba"
+  },
+  {
+    "station_code": "SMK",
+    "station_name": "Samalkha"
+  },
+  {
+    "station_code": "SMT",
+    "station_name": "Salamatpur"
+  },
+  {
+    "station_code": "SMTL",
+    "station_name": "Simariatal"
+  },
+  {
+    "station_code": "SMU",
+    "station_name": "Sambhu"
+  },
+  {
+    "station_code": "SNL",
+    "station_name": "Sanahwal"
+  },
+  {
+    "station_code": "SNP",
+    "station_name": "Sonipat"
+  },
+  {
+    "station_code": "SOR",
+    "station_name": "Sonagir"
+  },
+  {
+    "station_code": "SORI",
+    "station_name": "Sorai"
+  },
+  {
+    "station_code": "STLI",
+    "station_name": "Sithouli"
+  },
+  {
+    "station_code": "SUMR",
+    "station_name": "Sumer"
+  },
+  {
+    "station_code": "SUW",
+    "station_name": "Sukhisewaniyan"
+  },
+  {
+    "station_code": "SVDK",
+    "station_name": "Shri Mata Vaishno Devi Katra"
+  },
+  {
+    "station_code": "SVT",
+    "station_name": "Shivpura"
+  },
+  {
+    "station_code": "SZM",
+    "station_name": "Subzi Mandi"
+  },
+  {
+    "station_code": "TAN",
+    "station_name": "Tarana Road"
+  },
+  {
+    "station_code": "TBT",
+    "station_name": "Talbahat"
+  },
+  {
+    "station_code": "TDO",
+    "station_name": "Tanda Urmar"
+  },
+  {
+    "station_code": "TJP",
+    "station_name": "Tajpur"
+  },
+  {
+    "station_code": "TKD",
+    "station_name": "Tuglakabad"
+  },
+  {
+    "station_code": "TKDC",
+    "station_name": "Tuglakabad Jn Cabin"
+  },
+  {
+    "station_code": "TKJ",
+    "station_name": "Tilak Bridge"
+  },
+  {
+    "station_code": "TRR",
+    "station_name": "Taraori"
+  },
+  {
+    "station_code": "UBC",
+    "station_name": "Ambala City"
+  },
+  {
+    "station_code": "UCB",
+    "station_name": "Unchi Bassi"
+  },
+  {
+    "station_code": "UDM",
+    "station_name": "Undasa Madhawpu"
+  },
+  {
+    "station_code": "UJN",
+    "station_name": "Ujjain Jn"
+  },
+  {
+    "station_code": "UMB",
+    "station_name": "Ambala Cantt Jn"
+  },
+  {
+    "station_code": "VGLJ",
+    "station_name": "Veerangana Lakshmibai Jhansi"
+  },
+  {
+    "station_code": "VJPJ",
+    "station_name": "Vijiypur Jammu"
+  },
+  {
+    "station_code": "VRBD",
+    "station_name": "Vrindaban Road"
+  },
+  {
+    "station_code": "VRG",
+    "station_name": "Vikramnagar"
+  }
+]

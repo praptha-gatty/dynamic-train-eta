@@ -133,6 +133,8 @@ async function syncTrain(result) {
 }
 
 
+const stationMaster = require("./stationMaster");
+
 // ==========================================
 // SYNC STATIONS
 // ==========================================
@@ -153,28 +155,17 @@ async function syncStations(route) {
             station.stationCode &&
             station.stationName
         )
-        .map(station => ({
-
-            station_code:
-                station.stationCode,
-
-            station_name:
-                station.stationName,
-
-            city:
-                null,
-
-            state:
-                null,
-
-            latitude:
-                station.latitude ??
-                null,
-
-            longitude:
-                station.longitude ??
-                null
-        }));
+        .map(station => {
+            const info = stationMaster.getStationInfo(station.stationCode, station.stationName);
+            return {
+                station_code: info.station_code,
+                station_name: info.station_name,
+                city: info.city,
+                state: info.state,
+                latitude: info.latitude,
+                longitude: info.longitude
+            };
+        });
 
 
     // Remove duplicate station codes
