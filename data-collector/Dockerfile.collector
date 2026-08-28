@@ -1,0 +1,28 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for native modules if needed
+RUN apk add --no-cache dumb-init python3 make g++
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy source code
+COPY *.js ./
+
+# Create directories
+RUN mkdir -p logs data/processed data/raw
+
+# Environment
+ENV NODE_ENV=production
+
+# Run as non-root user
+USER node
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "collector.js"]

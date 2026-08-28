@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dynamic-train-eta-backend
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_PREFIX=/api/v1
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - RAILRADAR_API_KEY=${RAILRADAR_API_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173,http://localhost:3000}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-900000}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-100}
+      - WS_ENABLED=${WS_ENABLED:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - train-eta-network
+
+  # Data Collector (runs every 5 minutes)
+  collector:
+    build:
+      context: ./data-collector
+      dockerfile: Dockerfile.collector
+    container_name: dynamic-train-eta-collector
+    environment:
+      - NODE_ENV=production
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - RAILRADAR_API_KEY=${RAILRADAR_API_KEY}
+    env_file:
+      - ./data-collector/.env
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./data-collector/logs:/app/logs
+    networks:
+      - train-eta-network
+    depends_on:
+      - backend
+
+networks:
+  train-eta-network:
+    driver: bridge
+
+volumes:
+  backend-logs:
+  collector-logs:

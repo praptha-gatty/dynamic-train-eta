@@ -16,158 +16,234 @@ Backend service for real-time train tracking, historical data, and ETA predictio
 ## Project Structure
 
 ```
-backend/
-├── src/
-│   ├── server.js              # Entry point
-│   ├── routes/
-│   │   ├── trains.js          # Train & real-time status endpoints
-│   │   └── eta.js             # ETA prediction endpoints
-│   ├── services/
-│   │   ├── supabase.js        # Supabase client & connection
-│   │   ├── trainService.js    # Train data operations
-│   │   └── etaService.js      # ETA prediction & RailRadar integration
-│   ├── validators/
-│   │   └── index.js           # Zod validation schemas
-│   ├── middleware/            # (extensible)
-│   ├── utils/
-│   │   └── logger.js          # Winston logger
-│   └── websocket/
-│       └── handlers.js        # Socket.IO event handlers
-├── Dockerfile
-├── docker-compose.yml
-├── package.json
-└── .env.example
+dynamic-train-eta-main/
+├── backend/                    # Backend API (this folder)
+│   ├── src/
+│   │   ├── server.js           # Entry point - Express + WebSocket
+│   │   ├── routes/
+│   │   │   ├── trains.js       # /trains, /realtime, /history, /route
+│   │   │   └── eta.js          # /eta/predict, /eta/live
+│   │   ├── services/
+│   │   │   ├── supabase.js     # Supabase client (anon + admin)
+│   │   │   ├── trainService.js # DB queries for trains/status/history
+│   │   │   └── etaService.js   # RailRadar live API + ETA calculation
+│   │   ├── validators/
+│   │   │   └── index.js        # Zod schemas for input validation
+│   │   ├── utils/
+│   │   │   └── logger.js       # Winston logging
+│   │   └── websocket/
+│   │       └── handlers.js     # Real-time WebSocket events
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── package.json
+│   ├── .env.example
+│   └── setup.sh                # Auto-setup script
+│
+├── data-collector/             # Data collector (collects every 5 min)
+│   ├── collector.js            # Main loop - RailRadar → Supabase + CSV
+│   ├── package.json
+│   └── (other collector scripts)
+│
+├── data/                       # Data files
+│   ├── active-trains.json      # Train numbers to track
+│   └── processed/              # ML-ready CSV files
+│
+└── schema_update.sql           # Run ONCE in Supabase SQL Editor
 ```
 
-## Quick Start
+---
 
-### 1. Install Dependencies
+## Quick Start - Choose Your Method
+
+### 🐳 Method 1: Docker (Easiest - No Node.js Install Needed)
+
+**Prerequisites:** Docker Desktop installed
+
+```bash
+# 1. Create .env files in BOTH folders
+cp backend/.env.example backend/.env
+# Edit backend/.env with your keys
+
+# Create data-collector/.env with same keys
+# (copy backend/.env to data-collector/.env)
+
+# 2. Run Supabase schema (one time)
+# Go to Supabase Dashboard → SQL Editor → Paste schema_update.sql → Run
+
+# 3. Start everything with Docker
+cd backend
+docker-compose up -d --build
+
+# 4. Start data collector (separate terminal)
+cd ../data-collector
+docker run --rm -it \
+  --env-file .env \
+  -v ${PWD}:/app \
+  -v ${PWD}/../data:/app/data \
+  node:20-alpine sh -c "npm install && npm start"
+```
+
+**That's it!** Backend at `http://localhost:3000`, collector runs in background.
+
+---
+
+### 💻 Method 2: Manual Setup (With Auto-Install Script)
+
+**Prerequisites:** Windows/Mac/Linux with internet
+
+```bash
+# 1. Run the auto-setup script (installs Node.js 20, deps, creates .env template)
+cd backend
+chmod +x setup.sh
+./setup.sh
+
+# 2. Edit .env files with your ACTUAL keys
+# backend/.env and data-collector/.env
+
+# 3. Run Supabase schema (one time in Supabase Dashboard → SQL Editor)
+
+# 4. Start BOTH services (needs 2 terminals)
+
+# Terminal 1 - Data Collector (collects every 5 min)
+cd data-collector
+npm start
+
+# Terminal 2 - Backend API
+cd backend
+npm run dev
+```
+
+**Auto-setup script does:**
+- Checks/installs Node.js 20+ (via nvm/fnm/chocolatey/brew)
+- Runs `npm install` in both folders
+- Creates `.env` from template if missing
+- Verifies Supabase connection
+
+---
+
+### 📋 Method 3: Manual Step-by-Step
+
+#### Step 1: Install Node.js 20+
+- **Windows:** `winget install OpenJS.NodeJS.LTS` or download from nodejs.org
+- **Mac:** `brew install node@20`
+- **Linux:** `curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs`
+- **Verify:** `node --version` → should show `v20.x.x`
+
+#### Step 2: Create Environment Files
+
+**backend/.env:**
+```env
+PORT=3000
+NODE_ENV=development
+API_PREFIX=/api/v1
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+RAILRADAR_API_KEY=your-railradar-key
+CORS_ORIGIN=http://localhost:5173,http://localhost:3000
+```
+
+**data-collector/.env:**
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+RAILRADAR_API_KEY=your-railradar-key
+```
+
+#### Step 3: Run Database Schema (ONE TIME)
+1. Open Supabase Dashboard → SQL Editor
+2. Copy entire `schema_update.sql` content
+3. Paste and click **Run**
+
+#### Step 4: Install Dependencies
+```bash
+# Backend
+cd backend && npm install
+
+# Data Collector
+cd ../data-collector && npm install
+```
+
+#### Step 5: Start Both Services (2 Terminals)
+
+**Terminal 1 - Data Collector:**
+```bash
+cd data-collector
+npm start
+# Logs: "COLLECTION CYCLE COMPLETED" every 5 minutes
+```
+
+**Terminal 2 - Backend API:**
 ```bash
 cd backend
-npm install
-```
-
-### 2. Configure Environment
-```bash
-cp .env.example .env
-# Edit .env with your keys
-```
-
-Required variables:
-- `SUPABASE_URL` - From Supabase Dashboard > Settings > API
-- `SUPABASE_ANON_KEY` - From Supabase Dashboard > Settings > API
-- `RAILRADAR_API_KEY` - From railradar.in developer portal
-
-### 3. Run Development Server
-```bash
 npm run dev
 # Server at http://localhost:3000
+# Health: http://localhost:3000/health
 ```
 
-### 4. Run with Docker
+---
+
+## Verify Everything Works
+
 ```bash
-docker-compose up -d --build
+# Health check
+curl http://localhost:3000/health
+
+# List trains
+curl http://localhost:3000/api/v1/trains
+
+# Real-time status
+curl "http://localhost:3000/api/v1/realtime?trainNumber=12919&journeyDate=2026-08-28"
+
+# ETA prediction
+curl "http://localhost:3000/api/v1/eta/predict?trainNumber=12919&journeyDate=2026-08-28&targetStationCode=NDLS"
 ```
+
+---
 
 ## API Endpoints
 
 Base URL: `http://localhost:3000/api/v1`
 
-### Health Check
-```
-GET /health
-GET /health/db
-```
+| Category | Endpoint | Description |
+|----------|----------|-------------|
+| **Health** | `GET /health` | Server + DB status |
+| **Trains** | `GET /trains` | All trains |
+| | `GET /trains/:trainNumber` | Single train |
+| | `GET /trains/:trainNumber/route?journeyDate=YYYY-MM-DD` | Route stations |
+| **Real-time** | `GET /realtime?trainNumber=12919&journeyDate=2026-08-28` | Current status |
+| | `GET /realtime/:trainNumber?journeyDate=2026-08-28` | Single train status |
+| **History** | `GET /history?trainNumber=12919&journeyDate=2026-08-28` | Historical snapshots |
+| | `GET /history/:trainNumber?journeyDate=2026-08-28` | Full journey history |
+| **ETA** | `GET /eta/predict?trainNumber=12919&journeyDate=2026-08-28&targetStationCode=NDLS` | Predicted arrival |
+| | `GET /eta/live/:trainNumber` | Live RailRadar data |
 
-### Trains
-```
-GET /trains                           # List all trains
-GET /trains/:trainNumber              # Get train details
-GET /trains/:trainNumber/route?journeyDate=YYYY-MM-DD  # Get route stations
-```
+---
 
-### Real-time Status
-```
-GET /realtime?trainNumber=12919&journeyDate=2026-08-28&page=1&limit=50
-GET /realtime/:trainNumber?journeyDate=2026-08-28
-```
+## WebSocket (Real-time Updates)
 
-### Historical Data
-```
-GET /history?trainNumber=12919&journeyDate=2026-08-28&page=1&limit=50
-GET /history/:trainNumber?journeyDate=2026-08-28
-```
-
-### ETA Prediction
-```
-GET /eta/predict?trainNumber=12919&journeyDate=2026-08-28&targetStationCode=NDLS&targetStationSequence=15
-GET /eta/live/:trainNumber
-```
-
-## WebSocket Events
-
-Connect: `ws://localhost:3000`
-
-### Client → Server
 ```javascript
-// Subscribe to train updates
+const socket = io('ws://localhost:3000');
+
+// Subscribe to a train
 socket.emit('subscribe_train', { trainNumber: '12919', journeyDate: '2026-08-28' });
 
-// Unsubscribe
-socket.emit('unsubscribe_train', { trainNumber: '12919', journeyDate: '2026-08-28' });
+// Listen for updates
+socket.on('train_update', (data) => {
+  console.log('Train moved:', data.current_station, 'Delay:', data.delay_minutes);
+});
+
+socket.on('status_change', (data) => {
+  console.log('Status:', data.status); // IN_TRANSIT, COMPLETED, CONFLICT_FLAGGED
+});
 ```
 
-### Server → Client
-```javascript
-// Train position/update
-socket.on('train_update', (data) => { /* { trainNumber, journeyDate, current_station, delay_minutes, ... } */ });
-
-// Status change (IN_TRANSIT, COMPLETED, CONFLICT_FLAGGED)
-socket.on('status_change', (data) => { /* { trainNumber, journeyDate, status } */ });
-
-// Subscription confirmed
-socket.on('subscribed', (data) => { /* { trainNumber, journeyDate } */ });
-
-// Errors
-socket.on('error', (data) => { /* { message } */ });
-```
-
-## Response Format
-
-### Success
-```json
-{
-  "data": { ... },
-  "pagination": { "page": 1, "limit": 50, "total": 100, "totalPages": 2 }
-}
-```
-
-### Error
-```json
-{
-  "error": "Validation failed",
-  "details": { "trainNumber": ["Train number must be 5 digits"] }
-}
-```
-
-## Database Schema
-
-The backend expects these Supabase tables (created via `schema_update.sql`):
-
-- `trains` - Master train details
-- `train_current_status` - Single current location per train/journey
-- `train_history` - Historical observations with unique constraint on `(train_number, journey_date, station_sequence, captured_at)`
-
-## Data Collector Integration
-
-The existing `data-collector/collector.js` already writes to:
-- `train_history` (historical snapshots)
-- `train_current_status` (real-time current location)
-- `trains` (master data)
-
-This backend reads from those tables and provides APIs for frontend consumption.
+---
 
 ## Environment Variables
+
+### Backend (`backend/.env`)
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -176,28 +252,81 @@ This backend reads from those tables and provides APIs for frontend consumption.
 | `API_PREFIX` | No | /api/v1 | API base path |
 | `SUPABASE_URL` | **Yes** | - | Supabase project URL |
 | `SUPABASE_ANON_KEY` | **Yes** | - | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | No | - | Admin key (for writes) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | - | Admin key (writes) |
 | `RAILRADAR_API_KEY` | **Yes** | - | RailRadar API key |
-| `CORS_ORIGIN` | No | localhost:5173,localhost:3000 | Allowed origins |
-| `RATE_LIMIT_WINDOW_MS` | No | 900000 | Rate limit window |
+| `CORS_ORIGIN` | No | localhost:5173,localhost:3000 | Frontend URLs |
+| `RATE_LIMIT_WINDOW_MS` | No | 900000 | Rate limit window (15 min) |
 | `RATE_LIMIT_MAX_REQUESTS` | No | 100 | Max requests per window |
 | `WS_ENABLED` | No | true | Enable WebSocket |
 | `LOG_LEVEL` | No | info | Log level |
 
-## Deployment
+### Data Collector (`data-collector/.env`)
 
-### Docker (Recommended)
-```bash
-docker-compose up -d
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_URL` | **Yes** | Supabase project URL |
+| `SUPABASE_ANON_KEY` | **Yes** | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Admin key (writes) |
+| `RAILRADAR_API_KEY` | **Yes** | RailRadar API key |
+
+---
+
+## Data Flow
+
+```
+┌──────────────┐     ┌─────────────────┐     ┌─────────────┐
+│  RailRadar   │────▶│  Data Collector │────▶│  Supabase   │
+│   (Live)     │     │  (Every 5 min)  │     │  (Postgres) │
+└──────────────┘     └─────────────────┘     └──────┬──────┘
+                                                    │
+                              ┌─────────────────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │    Backend      │◀─── Frontend / Mobile App
+                     │  (Express API)  │
+                     └────────┬────────┘
+                              │
+                     ┌────────▼────────┐
+                     │   WebSocket     │─── Live updates to UI
+                     └─────────────────┘
 ```
 
-### Manual
+**Tables in Supabase:**
+- `trains` - Master train info (number, name, type, source, destination)
+- `train_current_status` - **One row per train/journey** = current location
+- `train_history` - **All snapshots** = every 5 min (used for ML training)
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `npm not found` | Install Node.js 20+ from nodejs.org |
+| `Supabase connection failed` | Check `.env` keys, run `schema_update.sql` |
+| `RailRadar 401/403` | Regenerate API key at railradar.in |
+| `Port 3000 in use` | Change `PORT` in `.env` or kill process |
+| `WebSocket not connecting` | Check `WS_ENABLED=true`, CORS origins |
+| `GitHub secret scanning alert` | Regenerate keys in Supabase/RailRadar immediately |
+
+---
+
+## Deployment
+
+### Docker (Production)
 ```bash
+cd backend
+docker-compose -f docker-compose.yml up -d --build
+```
+
+### Manual Production
+```bash
+cd backend
 npm install --production
 NODE_ENV=production node src/server.js
 ```
 
-### Reverse Proxy (Nginx)
+### Nginx Reverse Proxy
 ```nginx
 location /api/v1/ {
     proxy_pass http://localhost:3000;
@@ -208,6 +337,8 @@ location /api/v1/ {
     proxy_cache_bypass $http_upgrade;
 }
 ```
+
+---
 
 ## License
 
