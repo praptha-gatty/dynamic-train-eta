@@ -1,0 +1,15 @@
+DYNAMIC TRAIN ETA MODEL RESULTS
+==================================================
+
+Training samples: 2089
+Testing samples: 523
+
+BASELINE MODEL
+MAE: 24.1477
+RMSE: 42.3328
+R2: -0.0003
+
+RANDOM FOREST MODEL
+MAE: 5.1708
+RMSE: 17.5090
+R2: 0.8289
