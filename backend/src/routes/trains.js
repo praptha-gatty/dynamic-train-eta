@@ -1,6 +1,6 @@
 <<<<<<< HEAD
 import express from 'express';
-import { validateQuery, validateParams, trainNumberSchema, journeyDateSchema, paginationSchema, realTimeStatusQuerySchema, trainHistoryQuerySchema } from '../validators/index.js';
+import { validateQuery, validateParams, trainNumberSchema, journeyDateSchema, realtimeStatusQuerySchema, trainHistoryQuerySchema } from '../validators/index.js';
 import * as trainService from '../services/trainService.js';
 import logger from '../utils/logger.js';
 
@@ -27,7 +27,7 @@ router.get('/trains/:trainNumber', validateParams(trainNumberSchema), async (req
   }
 });
 
-router.get('/realtime', validateQuery(realTimeStatusQuerySchema), async (req, res, next) => {
+router.get('/realtime', validateQuery(realtimeStatusQuerySchema), async (req, res, next) => {
   try {
     const { trainNumber, journeyDate, status, page, limit } = req.validatedQuery;
     const result = await trainService.getCurrentStatus({ trainNumber, journeyDate, status, page, limit });
