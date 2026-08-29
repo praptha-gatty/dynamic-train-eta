@@ -1,298 +1,232 @@
-<<<<<<< HEAD
 import express from 'express';
-import { validateQuery, validateParams, trainNumberSchema, journeyDateSchema, realtimeStatusQuerySchema, trainHistoryQuerySchema } from '../validators/index.js';
+
+import {
+  validateQuery,
+  validateParams,
+  trainNumberParamsSchema,
+  journeyDateQuerySchema,
+  realtimeStatusQuerySchema,
+  trainHistoryQuerySchema
+} from '../validators/index.js';
+
 import * as trainService from '../services/trainService.js';
-import logger from '../utils/logger.js';
 
 const router = express.Router();
 
-router.get('/trains', async (req, res, next) => {
+// ============================================================
+// GET ALL TRAINS
+// GET /api/v1/trains
+// ============================================================
+router.get('/', async (req, res, next) => {
   try {
     const trains = await trainService.getAllTrains();
-    res.json({ data: trains, count: trains.length });
-  } catch (error) {
-    next(error);
-  }
-});
 
-router.get('/trains/:trainNumber', validateParams(trainNumberSchema), async (req, res, next) => {
-  try {
-    const train = await trainService.getTrainByNumber(req.validatedParams.trainNumber);
-    if (!train) {
-      return res.status(404).json({ error: 'Train not found' });
-    }
-    res.json({ data: train });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/realtime', validateQuery(realtimeStatusQuerySchema), async (req, res, next) => {
-  try {
-    const { trainNumber, journeyDate, status, page, limit } = req.validatedQuery;
-    const result = await trainService.getCurrentStatus({ trainNumber, journeyDate, status, page, limit });
     res.json({
-      data: result.data,
-      pagination: {
-        page: page || 1,
-        limit: limit || 50,
-        total: result.count,
-        totalPages: Math.ceil((result.count || 0) / (limit || 50))
-      }
+      data: trains,
+      count: trains.length
     });
   } catch (error) {
     next(error);
   }
 });
 
-router.get('/realtime/:trainNumber', validateParams(trainNumberSchema), validateQuery(journeyDateSchema), async (req, res, next) => {
-  try {
-    const { trainNumber } = req.validatedParams;
-    const { journeyDate } = req.validatedQuery;
-    
-    if (!journeyDate) {
-      return res.status(400).json({ error: 'journeyDate query parameter required' });
-    }
-    
-    const status = await trainService.getCurrentStatusByTrain(trainNumber, journeyDate);
-    if (!status) {
-      return res.status(404).json({ error: 'No real-time status found for this train/journey' });
-    }
-    res.json({ data: status });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/history', validateQuery(trainHistoryQuerySchema), async (req, res, next) => {
-  try {
-    const filters = req.validatedQuery;
-    const result = await trainService.getTrainHistory(filters);
-    res.json({
-      data: result.data,
-      pagination: {
-        page: filters.page,
-        limit: filters.limit,
-        total: result.count,
-        totalPages: Math.ceil((result.count || 0) / filters.limit)
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/history/:trainNumber', validateParams(trainNumberSchema), validateQuery(journeyDateSchema), async (req, res, next) => {
-  try {
-    const { trainNumber } = req.validatedParams;
-    const { journeyDate } = req.validatedQuery;
-    
-    if (!journeyDate) {
-      return res.status(400).json({ error: 'journeyDate query parameter required' });
-    }
-    
-    const history = await trainService.getTrainHistoryForJourney(trainNumber, journeyDate);
-    res.json({ data: history, count: history.length });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/route/:trainNumber', validateParams(trainNumberSchema), validateQuery(journeyDateSchema), async (req, res, next) => {
-  try {
-    const { trainNumber } = req.validatedParams;
-    const { journeyDate } = req.validatedQuery;
-    
-    if (!journeyDate) {
-      return res.status(400).json({ error: 'journeyDate query parameter required' });
-    }
-    
-    const stations = await trainService.getStationsByRoute(trainNumber, journeyDate);
-    res.json({ data: stations, count: stations.length });
-  } catch (error) {
-    next(error);
-  }
-});
-
-export default router;
-=======
-import express from 'express';
-import { validateQuery, validateParams, trainNumberSchema, journeyDateSchema, paginationSchema, realTimeStatusQuerySchema } from '../validators/index.js';
-import * as trainService from '../services/trainService.js';
-import logger from '../utils/logger.js';
-
-const router = express.Router();
-
-router.get(['/', '/trains'], async (req, res, next) => {
-  try {
-    const trains = await trainService.getAllTrains();
-    res.json({ data: trains, count: trains.length });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get(['/:trainNumber', '/trains/:trainNumber'], validateParams(trainNumberSchema), async (req, res, next) => {
-  try {
-    const train = await trainService.getTrainByNumber(req.validatedParams.trainNumber);
-    if (!train) {
-      return res.status(404).json({ error: 'Train not found' });
-    }
-    res.json({ data: train });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/realtime', validateQuery(realTimeStatusQuerySchema), async (req, res, next) => {
-  try {
-    const { trainNumber, journeyDate, status, page, limit } = req.validatedQuery;
-    const result = await trainService.getCurrentStatus({ trainNumber, journeyDate, status, page, limit });
-    res.json({
-      data: result.data,
-      pagination: {
-        page: page || 1,
-        limit: limit || 50,
-        total: result.count,
-        totalPages: Math.ceil((result.count || 0) / (limit || 50))
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/realtime/:trainNumber', validateParams(trainNumberSchema), validateQuery(journeyDateSchema), async (req, res, next) => {
-  try {
-    const { trainNumber } = req.validatedParams;
-    const { journeyDate } = req.validatedQuery;
-    
-    if (!journeyDate) {
-      return res.status(400).json({ error: 'journeyDate query parameter required' });
-    }
-    
-    const status = await trainService.getCurrentStatusByTrain(trainNumber, journeyDate);
-    if (!status) {
-      return res.status(404).json({ error: 'No real-time status found for this train/journey' });
-    }
-    res.json({ data: status });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/history', validateQuery(import('../validators/index.js').then(m => m.trainHistoryQuerySchema)), async (req, res, next) => {
-  try {
-    const filters = req.validatedQuery;
-    const result = await trainService.getTrainHistory(filters);
-    res.json({
-      data: result.data,
-      pagination: {
-        page: filters.page,
-        limit: filters.limit,
-        total: result.count,
-        totalPages: Math.ceil((result.count || 0) / filters.limit)
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/history/:trainNumber', validateParams(trainNumberSchema), validateQuery(journeyDateSchema), async (req, res, next) => {
-  try {
-    const { trainNumber } = req.validatedParams;
-    const { journeyDate } = req.validatedQuery;
-    
-    if (!journeyDate) {
-      return res.status(400).json({ error: 'journeyDate query parameter required' });
-    }
-    
-    const history = await trainService.getTrainHistoryForJourney(trainNumber, journeyDate);
-    res.json({ data: history, count: history.length });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/route/:trainNumber', validateParams(trainNumberSchema), validateQuery(journeyDateSchema), async (req, res, next) => {
-  try {
-    const { trainNumber } = req.validatedParams;
-    const { journeyDate } = req.validatedQuery;
-    
-    if (!journeyDate) {
-      return res.status(400).json({ error: 'journeyDate query parameter required' });
-    }
-    
-    const stations = await trainService.getStationsByRoute(trainNumber, journeyDate);
-    res.json({ data: stations, count: stations.length });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/search', async (req, res, next) => {
-  try {
-    const q = req.query.q || '';
-    const results = await trainService.searchTrains(q);
-    res.json({ data: results, count: results.length });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/available', async (req, res, next) => {
-  try {
-    const trains = await trainService.getAvailableTrains();
-    res.json({ data: trains, count: trains.length });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/:trainNumber/live-eta', async (req, res, next) => {
-  try {
-    const { trainNumber } = req.params;
-    const etaData = await trainService.getTrainLiveETA(trainNumber);
-    if (!etaData) {
-      return res.status(404).json({ error: `No live ETA data found for train ${trainNumber}` });
-    }
-    res.json({ data: etaData });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/:trainNumber/history', async (req, res, next) => {
-  try {
-    const { trainNumber } = req.params;
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 50;
-
-    const result = await trainService.getTrainHistoryPaginated(trainNumber, page, limit);
-    res.json({
-      data: result.data,
-      pagination: {
+// ============================================================
+// REALTIME STATUS FOR ALL/FILTERED TRAINS
+// GET /api/v1/trains/realtime
+//
+// IMPORTANT: This MUST be before /:trainNumber
+// ============================================================
+router.get(
+  '/realtime',
+  validateQuery(realtimeStatusQuerySchema),
+  async (req, res, next) => {
+    try {
+      const {
+        trainNumber,
+        journeyDate,
+        status,
         page,
-        limit,
-        total: result.count,
-        totalPages: Math.ceil((result.count || 0) / limit)
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+        limit
+      } = req.validatedQuery;
 
-router.get('/live-dashboard', async (req, res, next) => {
-  try {
-    const statuses = await trainService.getAllActiveTrainStatuses();
-    res.json({ data: statuses, count: statuses.length });
-  } catch (error) {
-    next(error);
+      const result = await trainService.getCurrentStatus({
+        trainNumber,
+        journeyDate,
+        status,
+        page,
+        limit
+      });
+
+      const currentPage = page || 1;
+      const currentLimit = limit || 50;
+
+      res.json({
+        data: result.data,
+        pagination: {
+          page: currentPage,
+          limit: currentLimit,
+          total: result.count,
+          totalPages: Math.ceil(
+            (result.count || 0) / currentLimit
+          )
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
+
+// ============================================================
+// REALTIME STATUS FOR SPECIFIC TRAIN
+// GET /api/v1/trains/realtime/:trainNumber?journeyDate=YYYY-MM-DD
+// ============================================================
+router.get(
+  '/realtime/:trainNumber',
+  validateParams(trainNumberParamsSchema),
+  validateQuery(journeyDateQuerySchema),
+  async (req, res, next) => {
+    try {
+      const { trainNumber } = req.validatedParams;
+      const { journeyDate } = req.validatedQuery;
+
+      const status = await trainService.getCurrentStatusByTrain(
+        trainNumber,
+        journeyDate
+      );
+
+      if (!status) {
+        return res.status(404).json({
+          error:
+            'No real-time status found for this train/journey'
+        });
+      }
+
+      res.json({
+        data: status
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================================
+// TRAIN HISTORY
+// GET /api/v1/trains/history
+// ============================================================
+router.get(
+  '/history',
+  validateQuery(trainHistoryQuerySchema),
+  async (req, res, next) => {
+    try {
+      const filters = req.validatedQuery;
+
+      const result = await trainService.getTrainHistory(filters);
+
+      res.json({
+        data: result.data,
+        pagination: {
+          page: filters.page,
+          limit: filters.limit,
+          total: result.count,
+          totalPages: Math.ceil(
+            (result.count || 0) / filters.limit
+          )
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================================
+// TRAIN HISTORY FOR SPECIFIC TRAIN
+// GET /api/v1/trains/history/:trainNumber?journeyDate=YYYY-MM-DD
+// ============================================================
+router.get(
+  '/history/:trainNumber',
+  validateParams(trainNumberParamsSchema),
+  validateQuery(journeyDateQuerySchema),
+  async (req, res, next) => {
+    try {
+      const { trainNumber } = req.validatedParams;
+      const { journeyDate } = req.validatedQuery;
+
+      const history =
+        await trainService.getTrainHistoryForJourney(
+          trainNumber,
+          journeyDate
+        );
+
+      res.json({
+        data: history,
+        count: history.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================================
+// TRAIN ROUTE / STATIONS
+// GET /api/v1/trains/route/:trainNumber?journeyDate=YYYY-MM-DD
+// ============================================================
+router.get(
+  '/route/:trainNumber',
+  validateParams(trainNumberParamsSchema),
+  validateQuery(journeyDateQuerySchema),
+  async (req, res, next) => {
+    try {
+      const { trainNumber } = req.validatedParams;
+      const { journeyDate } = req.validatedQuery;
+
+      const stations = await trainService.getStationsByRoute(
+        trainNumber,
+        journeyDate
+      );
+
+      res.json({
+        data: stations,
+        count: stations.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================================
+// GET TRAIN BY TRAIN NUMBER
+// GET /api/v1/trains/:trainNumber
+//
+// IMPORTANT: This MUST come AFTER all named routes above.
+// ============================================================
+router.get(
+  '/:trainNumber',
+  validateParams(trainNumberParamsSchema),
+  async (req, res, next) => {
+    try {
+      const { trainNumber } = req.validatedParams;
+
+      const train =
+        await trainService.getTrainByNumber(trainNumber);
+
+      if (!train) {
+        return res.status(404).json({
+          error: 'Train not found'
+        });
+      }
+
+      res.json({
+        data: train
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 export default router;
-
->>>>>>> 097028d (Add  page)
