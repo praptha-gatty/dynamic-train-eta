@@ -66,7 +66,7 @@ export async function checkBackendHealth() {
  */
 export async function getTrainsList() {
   try {
-    const res = await apiRequest('/api/v1/trains/trains');
+    const res = await apiRequest('/api/v1/trains');
     if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
       return res.data;
     }
