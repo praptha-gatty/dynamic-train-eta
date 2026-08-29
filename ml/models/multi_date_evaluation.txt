@@ -1,0 +1,12 @@
+MULTI-DATE REALISTIC MODEL EVALUATION
+============================================================
+
+      date  train_rows  test_rows       mae      rmse        r2
+2026-08-27         267       1901 23.122268 51.125712 -0.132149
+2026-08-28        2168        116 17.719436 21.992001       NaN
+2026-09-01        2284        164  2.848225  5.265973       NaN
+2026-09-02        2448        164  0.282313  0.371034       NaN
+
+Average MAE: 10.9931 minutes
+Average RMSE: 19.6887 minutes
+Average R2: -0.1321

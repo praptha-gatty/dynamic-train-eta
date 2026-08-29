@@ -1,0 +1,12 @@
+REALISTIC JOURNEY-BASED EVALUATION
+==================================================
+
+Training dates: [Timestamp('2026-08-26 00:00:00'), Timestamp('2026-08-27 00:00:00'), Timestamp('2026-08-28 00:00:00'), Timestamp('2026-09-01 00:00:00')]
+Testing date: 2026-09-02 00:00:00
+
+Training rows: 2448
+Testing rows: 164
+
+MAE: 0.2890 minutes
+RMSE: 0.3805 minutes
+R2: 0.0000
