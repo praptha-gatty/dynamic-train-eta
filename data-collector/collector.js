@@ -139,75 +139,48 @@ function csvEscape(value) {
 // LOAD ACTIVE TRAINS
 // ============================================================
 
-function loadActiveTrains() {
+async function loadActiveTrains() {
+    try {
+        const { data: dbTrains, error } = await supabase
+            .from("trains")
+            .select("train_number");
+
+        if (!error && dbTrains && dbTrains.length > 0) {
+            const trains = [...new Set(dbTrains.map(t => String(t.train_number).trim()).filter(Boolean))];
+            console.log(`✅ Loaded ${trains.length} train(s) dynamically from Supabase database`);
+            return trains;
+        }
+    } catch (err) {
+        console.warn("⚠️ Could not fetch trains from Supabase, falling back to active-trains.json:", err.message);
+    }
 
     if (!fs.existsSync(ACTIVE_TRAINS_FILE)) {
-
-        console.error(
-            "❌ active-trains.json not found."
-        );
-
-        console.error(
-            "Run:"
-        );
-
-        console.error(
-            "node data-collector/discover-trains.js"
-        );
-
+        console.error("❌ active-trains.json not found and Supabase query returned no trains.");
         return [];
     }
 
     try {
-
-        const content =
-            fs.readFileSync(
-                ACTIVE_TRAINS_FILE,
-                "utf8"
-            );
-
-        const parsed =
-            JSON.parse(content);
+        const content = fs.readFileSync(ACTIVE_TRAINS_FILE, "utf8");
+        const parsed = JSON.parse(content);
 
         if (!Array.isArray(parsed)) {
-
-            console.error(
-                "❌ active-trains.json must contain an array."
-            );
-
+            console.error("❌ active-trains.json must contain an array.");
             return [];
         }
 
         const trains = [
             ...new Set(
                 parsed
-                    .map(value =>
-                        String(value).trim()
-                    )
+                    .map(value => String(value).trim())
                     .filter(Boolean)
             )
         ];
 
-        console.log(
-            `✅ Loaded ${trains.length} train(s)`
-        );
-
-        console.log(
-            `🚆 ${trains.join(", ")}`
-        );
-
+        console.log(`✅ Loaded ${trains.length} train(s) from local active-trains.json`);
         return trains;
 
     } catch (error) {
-
-        console.error(
-            "❌ Failed to read active-trains.json"
-        );
-
-        console.error(
-            error.message
-        );
-
+        console.error("❌ Failed to read active-trains.json", error.message);
         return [];
     }
 }
@@ -435,52 +408,52 @@ function findNextRouteStation(
 function getTimeFeatures(
     timestamp
 ) {
-
     const date =
         new Date(timestamp);
 
-    const hour =
-        date.getUTCHours();
+    // Standardize time feature extraction in IST (Asia/Kolkata) timezone
+    const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        hourCycle: "h23",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        weekday: "short"
+    });
+
+    const parts = {};
+    for (const part of formatter.formatToParts(date)) {
+        if (part.type !== "literal") {
+            parts[part.type] = part.value;
+        }
+    }
+
+    const hour = parseInt(parts.hour || "0", 10);
+    const minute = parseInt(parts.minute || "0", 10);
+    const month = parseInt(parts.month || "1", 10);
+    const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const dayOfWeek = weekdayMap[parts.weekday] ?? 0;
 
     let timePeriod;
-
     if (hour < 6) {
-
         timePeriod = "night";
-
     } else if (hour < 12) {
-
         timePeriod = "morning";
-
     } else if (hour < 18) {
-
         timePeriod = "afternoon";
-
     } else {
-
         timePeriod = "evening";
     }
 
     return {
-
-        day_of_week:
-            date.getUTCDay(),
-
-        hour:
-            hour,
-
-        minute:
-            date.getUTCMinutes(),
-
-        month:
-            date.getUTCMonth() + 1,
-
-        time_period:
-            timePeriod,
-
-        is_weekend:
-            date.getUTCDay() === 0 ||
-            date.getUTCDay() === 6
+        day_of_week: dayOfWeek,
+        hour: hour,
+        minute: minute,
+        month: month,
+        time_period: timePeriod,
+        is_weekend: dayOfWeek === 0 || dayOfWeek === 6
     };
 }
 
@@ -741,7 +714,10 @@ function buildRecords(
             const actualMs = new Date(station.actualArrival).getTime();
             const scheduledMs = new Date(station.scheduledArrival).getTime();
             if (!isNaN(actualMs) && !isNaN(scheduledMs)) {
-                computedArrivalDelay = Math.round((actualMs - scheduledMs) / 60000);
+                let diff = Math.round((actualMs - scheduledMs) / 60000);
+                if (diff < -720) diff += 1440; // Midnight rollover adjustment
+                else if (diff > 720) diff -= 1440;
+                computedArrivalDelay = diff;
             }
         }
 
@@ -750,7 +726,10 @@ function buildRecords(
             const actualMs = new Date(station.actualDeparture).getTime();
             const scheduledMs = new Date(station.scheduledDeparture).getTime();
             if (!isNaN(actualMs) && !isNaN(scheduledMs)) {
-                computedDepartureDelay = Math.round((actualMs - scheduledMs) / 60000);
+                let diff = Math.round((actualMs - scheduledMs) / 60000);
+                if (diff < -720) diff += 1440; // Midnight rollover adjustment
+                else if (diff > 720) diff -= 1440;
+                computedDepartureDelay = diff;
             }
         }
 
@@ -792,14 +771,24 @@ function buildRecords(
         const distance = toNumber(station.distance);
         const speed = toNumber(station.speedToNextStationKmph);
 
+        const routeTotalDistance = route.length > 0 ? (toNumber(route[route.length - 1].distance) ?? 0) : 0;
+        const effectiveTotalDistance = totalDistance ?? (routeTotalDistance > 0 ? routeTotalDistance : null);
+
         let distanceRemaining = null;
-        if (distance !== null && totalDistance !== null && totalDistance >= distance) {
-            distanceRemaining = Number((totalDistance - distance).toFixed(2));
+        if (distance !== null && effectiveTotalDistance !== null && effectiveTotalDistance >= distance) {
+            distanceRemaining = Number((effectiveTotalDistance - distance).toFixed(2));
         }
 
-        const resolvedDistanceFromLast = isCurrent
-            ? current.distanceFromLastStation
-            : null;
+        let resolvedDistanceFromLast = null;
+        if (index > 0 && distance !== null) {
+            const prevDist = toNumber(prevRouteStation?.distance);
+            if (prevDist !== null && distance >= prevDist) {
+                resolvedDistanceFromLast = Number((distance - prevDist).toFixed(2));
+            }
+        }
+        if (resolvedDistanceFromLast === null && isCurrent) {
+            resolvedDistanceFromLast = current.distanceFromLastStation;
+        }
 
         const stationStatus = station.status || null;
         const runningStatus = data.status || (isCurrent ? station.status : null) || null;
@@ -939,8 +928,26 @@ async function insertIntoSupabase(
                 record.captured_at,
 
             api_updated_at:
-                record.api_updated_at
+                record.api_updated_at,
+
+            is_current_location:
+                record.is_current_location
         }));
+
+    // --------------------------------------------------------
+    // PRE-INSERTION PAYLOAD VALIDATION & DEBUG LOGGING
+    // --------------------------------------------------------
+    if (supabaseRecords.length > 0) {
+        const sample = supabaseRecords[0];
+        const criticalKeys = ['train_number', 'train_name', 'station_code', 'station_sequence', 'journey_date', 'is_current_location'];
+        const missing = criticalKeys.filter(k => sample[k] === null || sample[k] === undefined);
+
+        if (missing.length > 0) {
+            console.warn(`⚠️ PRE-INSERT WARNING: Train ${sample.train_number} payload has missing critical fields: ${missing.join(', ')}`);
+        } else {
+            console.log(`🔍 PRE-INSERT VALIDATION PASSED: Train ${sample.train_number} (${supabaseRecords.length} rows, sample sequence ${sample.station_sequence} - ${sample.station_code}, is_current_location: ${sample.is_current_location})`);
+        }
+    }
 
     // --------------------------------------------------------
     // Insert snapshot rows. Duplicates within a single run are
@@ -1148,6 +1155,28 @@ async function upsertCurrentStatus(requestedTrainNumber, data) {
     }
 }
 
+async function fetchWithRetry(url, options = {}, maxRetries = 3, backoffMs = 1000) {
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+        try {
+            return await axios({
+                method: "GET",
+                url,
+                headers: options.headers || {},
+                timeout: options.timeout || 5000
+            });
+        } catch (error) {
+            attempt++;
+            const errorMessage = error.response?.data?.message || error.message;
+            console.warn(`⚠️ API call failed (attempt ${attempt}/${maxRetries + 1}) to ${url}: ${errorMessage}`);
+            if (attempt > maxRetries) throw error;
+            const wait = backoffMs * Math.pow(2, attempt - 1) + Math.random() * 200;
+            console.log(`   Retrying in ${Math.round(wait)}ms...`);
+            await new Promise(resolve => setTimeout(resolve, wait));
+        }
+    }
+}
+
 // ============================================================
 // COLLECT ONE TRAIN
 // ============================================================
@@ -1174,11 +1203,11 @@ async function collectTrainData(
     try {
 
         // ----------------------------------------------------
-        // API REQUEST
+        // API REQUEST WITH TIMEOUT & RETRY
         // ----------------------------------------------------
 
         const response =
-            await axios.get(
+            await fetchWithRetry(
                 API_URL,
                 {
                     headers: {
@@ -1187,9 +1216,10 @@ async function collectTrainData(
                             `Bearer ${RAILRADAR_API_KEY}`
                     },
 
-                    timeout:
-                        30000
-                }
+                    timeout: 5000
+                },
+                3,
+                1000
             );
 
         const result =
@@ -1410,7 +1440,11 @@ async function collectAllTrains() {
     );
 
     const trainNumbers =
+<<<<<<< HEAD
         loadTrainNumbers();
+=======
+        await loadActiveTrains();
+>>>>>>> 097028d (Add  page)
 
     if (!trainNumbers.length) {
 

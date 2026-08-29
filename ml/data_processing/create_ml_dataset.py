@@ -82,12 +82,14 @@ print("\nConverting timestamps...")
 
 df["captured_at"] = pd.to_datetime(
     df["captured_at"],
-    errors="coerce"
+    errors="coerce",
+    utc=True
 )
 
 df["journey_date"] = pd.to_datetime(
     df["journey_date"],
-    errors="coerce"
+    errors="coerce",
+    utc=True
 )
 
 

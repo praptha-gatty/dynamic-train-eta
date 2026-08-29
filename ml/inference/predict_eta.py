@@ -119,7 +119,9 @@ print("Model loaded successfully.")
 # 5. SUPABASE GET FUNCTION
 # ============================================================
 
-def supabase_get(table, params):
+import time
+
+def supabase_get(table, params, max_retries=3, timeout=5):
 
     query = urllib.parse.urlencode(
         params
@@ -144,25 +146,30 @@ def supabase_get(table, params):
         method="GET",
     )
 
-    try:
+    for attempt in range(1, max_retries + 2):
+        try:
 
-        with urllib.request.urlopen(
-            request,
-            timeout=30
-        ) as response:
+            with urllib.request.urlopen(
+                request,
+                timeout=timeout
+            ) as response:
 
-            return json.loads(
-                response.read().decode(
-                    "utf-8"
+                return json.loads(
+                    response.read().decode(
+                        "utf-8"
+                    )
                 )
-            )
 
-    except Exception as exc:
-
-        raise SystemExit(
-            f"\nERROR reading Supabase table "
-            f"'{table}':\n{exc}"
-        )
+        except Exception as exc:
+            if attempt <= max_retries:
+                backoff = (2 ** (attempt - 1)) + 0.2
+                print(f"⚠️ Supabase request failed (attempt {attempt}/{max_retries + 1}): {exc}. Retrying in {backoff:.1f}s...")
+                time.sleep(backoff)
+            else:
+                raise SystemExit(
+                    f"\nERROR reading Supabase table "
+                    f"'{table}':\n{exc}"
+                )
 
 
 # ============================================================
@@ -771,25 +778,34 @@ distance_to_target = max(
 )
 
 
-if (
-    current_speed > 0
-    and
-    distance_to_target > 0
-):
+DEFAULT_AVG_SPEED_KMPH = 45.0
+
+effective_speed = (
+    current_speed
+    if (current_speed is not None and current_speed > 0)
+    else DEFAULT_AVG_SPEED_KMPH
+)
+
+if distance_to_target > 0:
 
     prediction_horizon = (
 
         distance_to_target
         /
-        current_speed
+        effective_speed
 
     ) * 60.0
+
+    if current_speed <= 0:
+        print(
+            f"\nNOTICE: Train is stationary or speed telemetry is 0 km/h. "
+            f"Using default average speed ({DEFAULT_AVG_SPEED_KMPH} km/h) for section velocity."
+        )
 
 else:
 
     print(
-        "\nWARNING: Speed or destination "
-        "distance unavailable."
+        "\nWARNING: Destination distance unavailable."
     )
 
     print(

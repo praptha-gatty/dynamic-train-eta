@@ -64,18 +64,35 @@ async function testTrain(trainNumber) {
     const API_URL =
         `https://railradar.in/api/v1/trains/${trainNumber}/live`;
 
-    try {
+    const maxRetries = 2;
+    let attempt = 0;
+    let response = null;
 
-        const response = await axios.get(
-            API_URL,
-            {
-                headers: {
-                    Authorization:
-                        `Bearer ${process.env.RAILRADAR_API_KEY}`
+    while (attempt <= maxRetries) {
+        try {
+            response = await axios.get(
+                API_URL,
+                {
+                    headers: {
+                        Authorization:
+                            `Bearer ${process.env.RAILRADAR_API_KEY}`
+                    },
+                    timeout: 5000
                 }
+            );
+            break;
+        } catch (error) {
+            attempt++;
+            if (attempt > maxRetries || error.response?.status === 404 || error.response?.status === 401) {
+                throw error;
             }
-        );
+            const backoff = 1000 * Math.pow(2, attempt - 1);
+            console.log(`   Retry ${attempt}/${maxRetries} for ${trainNumber} in ${backoff}ms...`);
+            await new Promise(r => setTimeout(r, backoff));
+        }
+    }
 
+    try {
         const result = response.data;
         const data = result.data || {};
 

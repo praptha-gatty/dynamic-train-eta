@@ -57,6 +57,11 @@ else:
 print("\nCreating engineered features...")
 
 
+DEFAULT_AVG_SPEED_KMPH = 45.0
+effective_speed = df["current_speed_kmph"].apply(
+    lambda s: float(s) if (pd.notna(s) and float(s) > 0) else DEFAULT_AVG_SPEED_KMPH
+)
+
 # Distance covered / route position
 df["route_progress"] = (
     df["station_sequence"]
@@ -73,14 +78,14 @@ df["station_gap"] = (
 
 # Delay × horizon interaction
 df["delay_horizon_interaction"] = (
-    df["current_delay_minutes"]
+    df["current_delay_minutes"].fillna(0)
     * df["prediction_horizon_minutes"]
 )
 
 
-# Speed × horizon approximation
+# Speed × horizon approximation (using smoothed effective speed)
 df["speed_horizon_distance"] = (
-    df["current_speed_kmph"]
+    effective_speed
     * df["prediction_horizon_minutes"]
     / 60
 )

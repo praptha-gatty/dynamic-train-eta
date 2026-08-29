@@ -133,10 +133,77 @@ function renderMap(stations) {
   setTimeout(() => routeMap.invalidateSize(), 0);
 }
 
+<<<<<<< HEAD
 async function searchTrain() {
   const trainNumber = searchInput.value.trim();
   if (!trainNumber) {
     searchMessage.textContent = 'Enter a train number to begin.';
+=======
+const autocompleteList = document.querySelector('#autocomplete-list');
+let searchDebounceTimer = null;
+
+async function fetchAutocompleteSuggestions(query) {
+  if (!query || query.trim().length < 1) {
+    if (autocompleteList) autocompleteList.hidden = true;
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/trains/search?q=${encodeURIComponent(query.trim())}`);
+    if (!res.ok) return;
+    const json = await res.json();
+    const matches = json.data || [];
+
+    if (!autocompleteList) return;
+
+    if (matches.length === 0) {
+      autocompleteList.hidden = true;
+      return;
+    }
+
+    autocompleteList.innerHTML = matches.map(t => `
+      <div class="autocomplete-item" data-number="${t.train_number}" style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.15s;">
+        <strong style="color: #1a1a1a;">${t.train_number}</strong>
+        <span style="color: #555; margin-left: 6px;">${t.train_name || ''}</span>
+      </div>
+    `).join('');
+
+    autocompleteList.hidden = false;
+
+    autocompleteList.querySelectorAll('.autocomplete-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const selectedNum = item.getAttribute('data-number');
+        if (searchInput) searchInput.value = selectedNum;
+        autocompleteList.hidden = true;
+        searchTrain(selectedNum);
+      });
+      item.addEventListener('mouseenter', () => item.style.background = '#f0f4f8');
+      item.addEventListener('mouseleave', () => item.style.background = '#ffffff');
+    });
+  } catch (err) {
+    console.warn('Autocomplete fetch error:', err.message);
+  }
+}
+
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchDebounceTimer);
+    const val = e.target.value;
+    searchDebounceTimer = setTimeout(() => fetchAutocompleteSuggestions(val), 300);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (autocompleteList && !searchInput.contains(e.target) && !autocompleteList.contains(e.target)) {
+      autocompleteList.hidden = true;
+    }
+  });
+}
+
+async function searchTrain(trainNumber) {
+  const trainNum = String(trainNumber || searchInput.value || '').trim();
+  if (!trainNum) {
+    searchMessage.textContent = 'Enter a train number or select from the dropdown to begin.';
+>>>>>>> 097028d (Add  page)
     searchMessage.className = 'search-message error';
     dashboard.hidden = true;
     return;
@@ -145,6 +212,7 @@ async function searchTrain() {
   searchMessage.className = 'search-message';
   searchMessage.textContent = 'Loading the latest available observations...';
   try {
+<<<<<<< HEAD
     const response = await fetch(`/api/train/${encodeURIComponent(trainNumber)}`);
     const responseText = await response.text();
     let data;
@@ -154,6 +222,15 @@ async function searchTrain() {
       throw new Error(`API returned ${response.status} ${response.statusText}, not JSON.`);
     }
     if (!response.ok) throw new Error(data.error || 'Train data could not be loaded.');
+=======
+    let response = await fetch(`/api/trains/${encodeURIComponent(trainNum)}/live-eta`);
+    if (!response.ok) {
+      response = await fetch(`/api/train/${encodeURIComponent(trainNum)}`);
+    }
+    const json = await response.json();
+    const data = json.data || json;
+    if (!response.ok || !data) throw new Error(json.error || `Train ${trainNum} not found.`);
+>>>>>>> 097028d (Add  page)
     render(data);
     searchMessage.textContent = `Showing data returned for train ${data.train_number}.`;
     document.querySelector('#connection-status').innerHTML = '<span></span> Data source connected';
@@ -166,5 +243,61 @@ async function searchTrain() {
   }
 }
 
+<<<<<<< HEAD
 searchForm.addEventListener('submit', event => { event.preventDefault(); searchTrain(); });
 searchInput.addEventListener('keydown', event => { if (event.key === 'Enter') searchTrain(); });
+=======
+async function loadTrains() {
+  try {
+    let response = await fetch('/api/trains/available');
+    if (!response.ok) {
+      response = await fetch('/api/trains');
+    }
+    if (!response.ok) return;
+    const result = await response.json();
+    const trains = result.data || [];
+
+    if (trainSelect && Array.isArray(trains) && trains.length > 0) {
+      trainSelect.innerHTML = '<option value="">-- Choose an active train --</option>';
+      trains.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.train_number;
+        const namePart = t.train_name ? ` - ${t.train_name}` : '';
+        const routePart = t.source_station && t.destination_station ? ` (${t.source_station} → ${t.destination_station})` : '';
+        opt.textContent = `${t.train_number}${namePart}${routePart}`;
+        trainSelect.appendChild(opt);
+      });
+    }
+  } catch (err) {
+    console.warn('Could not load trains list:', err.message);
+  }
+}
+
+if (trainSelect) {
+  trainSelect.addEventListener('change', () => {
+    if (trainSelect.value) {
+      searchTrain(trainSelect.value);
+    }
+  });
+}
+
+if (searchForm) {
+  searchForm.addEventListener('submit', event => {
+    event.preventDefault();
+    searchTrain();
+  });
+}
+
+if (searchInput) {
+  searchInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      if (autocompleteList) autocompleteList.hidden = true;
+      searchTrain();
+    }
+  });
+}
+
+// Initial load
+loadTrains();
+
+>>>>>>> 097028d (Add  page)

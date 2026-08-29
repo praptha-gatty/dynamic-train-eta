@@ -15,8 +15,24 @@
   <header class="topbar"><a class="brand" href="#top" aria-label="Railwise home"><span class="brand-mark">R</span><span>Railwise</span></a><div id="connection-status" class="live-indicator"><span></span> Ready for a train search</div><button class="icon-button" type="button" aria-label="Open notifications">◉</button></header>
   <main id="top" class="shell">
     <section class="welcome-row"><div><p class="eyebrow">Train intelligence platform</p><h1>Know when your train<br><em>really</em> arrives.</h1><p class="intro">Enter a train number to view movement data, ETA forecasts, and its route on the map.</p></div><div class="date-stamp"><strong>LIVE ETA</strong><span>DATA CONNECTED</span></div></section>
+<<<<<<< HEAD
     <form id="search-form" class="search-panel" aria-label="Train search"><span class="search-icon">⌕</span><label for="train-search">Search train number</label><input id="train-search" type="search" placeholder="Enter train number, e.g. 12919" autocomplete="off"><button id="search-button" class="primary-button" type="submit">Find train <span>→</span></button></form>
     <p id="search-message" class="search-message" role="status">Search for a train to load its latest available observations.</p>
+=======
+    <form id="search-form" class="search-panel" aria-label="Train search">
+      <span class="search-icon">⌕</span>
+      <label for="train-search">Search train number</label>
+      <div style="position: relative; flex: 1; min-width: 240px;">
+        <input id="train-search" type="search" placeholder="Enter train number or name, e.g. 12919, Malwa" autocomplete="off" style="width: 100%;">
+        <div id="autocomplete-list" class="autocomplete-dropdown" hidden style="position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d0d7de; border-radius: 4px; max-height: 220px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+      </div>
+      <select id="train-select" aria-label="Select train" style="padding: 10px 14px; border: 1px solid var(--line); border-radius: 4px; background: #fff; font-family: inherit; font-size: 13px; color: var(--ink); cursor: pointer; outline: none;">
+        <option value="">-- Or select an active train --</option>
+      </select>
+      <button id="search-button" class="primary-button" type="submit">Find train <span>→</span></button>
+    </form>
+    <p id="search-message" class="search-message" role="status">Search for a train or choose from the dropdown to load its latest observations.</p>
+>>>>>>> 097028d (Add  page)
     <section id="dashboard" hidden>
       <nav class="view-tabs" aria-label="Dashboard views"><a class="active" href="#overview">Overview</a><a href="#stations">Station ETA</a><a href="#timeline">Journey timeline</a><a href="#route-map">Live map</a></nav>
       <section id="overview" class="section-heading"><div><p class="eyebrow">Selected journey</p><h2>Train status</h2></div><span id="train-status" class="status-pill"></span></section>
