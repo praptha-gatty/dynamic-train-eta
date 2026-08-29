@@ -16,13 +16,27 @@ function trainData(trainNumber) {
   const rows = readRows().filter(row => String(row.train_number) === trainNumber);
   if (!rows.length) return null;
   const latestCapture = rows.reduce((latest, row) => row.captured_at > latest ? row.captured_at : latest, rows[0].captured_at);
-  const snapshot = rows.filter(row => row.captured_at === latestCapture).sort((a, b) => Number(a.station_sequence) - Number(b.station_sequence));
+  const snapshot = rows
+    .filter(row => row.captured_at === latestCapture)
+    .sort((a, b) => Number(a.station_sequence) - Number(b.station_sequence))
+    .map(row => ({
+      ...row,
+      expected_delay_minutes: row.delay_minutes === '' ? null : Number(row.delay_minutes)
+    }));
   const current = snapshot.reduce((latest, row) => Number(row.station_sequence) > Number(latest.station_sequence) ? row : latest, snapshot[0]);
   return {
     train_number: trainNumber,
-    train_name: null,
+    train_name: current.train_name || null,
     captured_at: latestCapture,
-    distance_km: current.distance_km ? Number(current.distance_km) : null,
+    distance_km: current.distance_from_origin_km === '' ? null : Number(current.distance_from_origin_km),
+    delay_minutes: current.delay_minutes === '' ? null : Number(current.delay_minutes),
+    expected_delay_minutes: current.expected_delay_minutes,
+    arrival_delay_minutes: current.arrival_delay_minutes === '' ? null : Number(current.arrival_delay_minutes),
+    departure_delay_minutes: current.departure_delay_minutes === '' ? null : Number(current.departure_delay_minutes),
+    distance_from_origin_km: current.distance_from_origin_km === '' ? null : Number(current.distance_from_origin_km),
+    distance_from_last_station_km: current.distance_from_last_station_km === '' ? null : Number(current.distance_from_last_station_km),
+    distance_remaining_km: current.distance_remaining_km === '' ? null : Number(current.distance_remaining_km),
+    speed_kmph: current.speed_kmph === '' ? null : Number(current.speed_kmph),
     current,
     stations: snapshot
   };

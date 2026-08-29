@@ -146,7 +146,13 @@ async function searchTrain() {
   searchMessage.textContent = 'Loading the latest available observations...';
   try {
     const response = await fetch(`/api/train/${encodeURIComponent(trainNumber)}`);
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error(`API returned ${response.status} ${response.statusText}, not JSON.`);
+    }
     if (!response.ok) throw new Error(data.error || 'Train data could not be loaded.');
     render(data);
     searchMessage.textContent = `Showing data returned for train ${data.train_number}.`;
