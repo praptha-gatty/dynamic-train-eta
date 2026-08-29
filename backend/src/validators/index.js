@@ -25,6 +25,14 @@ export const journeyDateQuerySchema = z.object({
 });
 
 // --------------------------------------------------
+// Train number params
+// --------------------------------------------------
+
+export const trainNumberParamsSchema = z.object({
+  trainNumber: trainNumberSchema
+});
+
+// --------------------------------------------------
 // Pagination
 // --------------------------------------------------
 
