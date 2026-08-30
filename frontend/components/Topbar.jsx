@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, RefreshCw, Wifi, WifiOff, Train } from 'lucide-react';
+import { RefreshCw, Train } from 'lucide-react';
 
-export function Topbar({ isWebSocketConnected, isBackendOnline, lastRefreshed, onRefresh, loading }) {
-  const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+export function Topbar({
+  isWebSocketConnected,
+  isBackendOnline,
+  lastRefreshed,
+  onRefresh,
+  loading
+}) {
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  );
+
+  const isConnected = Boolean(
+    isWebSocketConnected ||
+    (typeof isBackendOnline === 'object' ? (isBackendOnline?.isOnline || isBackendOnline?.isConnected) : isBackendOnline)
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -20,20 +33,33 @@ export function Topbar({ isWebSocketConnected, isBackendOnline, lastRefreshed, o
           </div>
           <div className="brand-text">
             <span className="brand-title">Railwise</span>
-            <span className="brand-tag">Dynamic Train ETA</span>
+            <span className="brand-tag">DYNAMIC TRAIN ETA</span>
           </div>
         </a>
 
         <div className="topbar-right">
           {/* Connection status badge */}
-          <div className={`connection-pill ${isWebSocketConnected ? 'live' : isBackendOnline ? 'connected' : 'offline'}`} title={isWebSocketConnected ? 'WebSocket live stream active' : isBackendOnline ? 'Backend API connected' : 'Local / demo mode'}>
+          <div
+            className={`connection-pill ${isWebSocketConnected ? 'live' : isConnected ? 'connected' : 'offline'}`}
+            title={
+              isWebSocketConnected
+                ? 'WebSocket live stream active'
+                : isConnected
+                ? 'Express & Python ML API connected'
+                : 'Local / demo mode'
+            }
+          >
             <span className="pulse-indicator" />
             <span className="connection-text">
-              {isWebSocketConnected ? 'Real-Time Stream' : isBackendOnline ? 'API Connected' : 'Demo Mode'}
+              {isWebSocketConnected
+                ? 'Live Stream Active'
+                : isConnected
+                ? 'API Connected'
+                : 'Demo Mode'}
             </span>
           </div>
 
-          {/* Clock */}
+          {/* Local Clock */}
           <div className="system-time" title="Current Local Time">
             <span className="time-val">{time}</span>
           </div>
@@ -56,3 +82,5 @@ export function Topbar({ isWebSocketConnected, isBackendOnline, lastRefreshed, o
     </header>
   );
 }
+
+export default Topbar;

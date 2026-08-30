@@ -1,9 +1,10 @@
 /**
  * API Service Layer for Dynamic Train ETA Platform.
- * Communicates with backend endpoints (/api/v1) and handles graceful fallbacks.
+ * Communicates with backend endpoints (/api/v1 and /api aliases) and handles graceful fallbacks.
  */
 
 import { FALLBACK_TRAIN_DATA, POPULAR_TRAINS, calculateLocalPrediction } from './fallbackData.js';
+import { getStationCoords } from '../utils/stationCoords.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -12,7 +13,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
  */
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
-  const timeoutMs = options.timeout || 12000;
+  const timeoutMs = options.timeout || 10000;
   
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -50,15 +51,34 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 /**
- * Check backend health status
+ * Check backend health status with multi-endpoint discovery (Express port 3000 & FastAPI port 8000)
  */
 export async function checkBackendHealth() {
-  try {
-    const data = await apiRequest('/health', { timeout: 3000 });
-    return { isOnline: true, data };
-  } catch (error) {
-    return { isOnline: false, error: error.message };
+  const customUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  const urlsToTry = [
+    customUrl ? `${customUrl}/api/health` : null,
+    customUrl ? `${customUrl}/health` : null,
+    'http://localhost:3000/api/health',
+    'http://localhost:3000/health',
+    '/api/health',
+    '/health',
+    'http://localhost:8000/health',
+    'http://localhost:8000/api/health'
+  ].filter(Boolean);
+
+  for (const url of urlsToTry) {
+    try {
+      const res = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(2500) });
+      if (res.ok) {
+        const data = await res.json();
+        return { isOnline: true, isConnected: true, isDemoMode: false, data, endpoint: url };
+      }
+    } catch {
+      // Continue to next fallback
+    }
   }
+
+  return { isOnline: false, isConnected: false, isDemoMode: true };
 }
 
 /**
@@ -74,6 +94,35 @@ export async function getTrainsList() {
     console.warn('API getTrainsList fallback to popular trains:', err.message);
   }
   return POPULAR_TRAINS;
+}
+
+/**
+ * Search trains by number or name with case-insensitive partial substring matching
+ */
+export async function searchTrains(query) {
+  if (!query || !query.trim()) return [];
+  try {
+    const res = await apiRequest(`/api/v1/trains/search?q=${encodeURIComponent(query.trim())}`);
+    if (res?.data && Array.isArray(res.data)) {
+      return res.data;
+    }
+  } catch (err) {
+    console.warn('API searchTrains fallback to local filtering:', err.message);
+  }
+
+  const q = query.trim().toLowerCase();
+  return POPULAR_TRAINS.filter(t => 
+    t.trainNumber.toLowerCase().includes(q) ||
+    t.trainName.toLowerCase().includes(q) ||
+    t.origin.toLowerCase().includes(q) ||
+    t.destination.toLowerCase().includes(q)
+  ).map(t => ({
+    train_number: t.trainNumber,
+    train_name: t.trainName,
+    source_station: t.origin,
+    destination_station: t.destination,
+    train_type: t.type
+  }));
 }
 
 /**
@@ -101,24 +150,24 @@ export async function getTrainRoute(trainNumber, journeyDate) {
 }
 
 /**
- * Predict ETA to a target station using backend dynamic prediction API
+ * Predict ETA to a target station or final terminus using backend dynamic prediction API
  */
 export async function predictETA({ trainNumber, journeyDate, targetStationCode, targetStationSequence }) {
-  const params = new URLSearchParams({
-    trainNumber,
-    journeyDate,
-    ...(targetStationCode ? { targetStationCode } : {}),
-    ...(targetStationSequence ? { targetStationSequence: String(targetStationSequence) } : {})
-  });
+  const params = new URLSearchParams();
+  if (trainNumber) params.append('trainNumber', trainNumber);
+  if (journeyDate) params.append('journeyDate', journeyDate);
+  if (targetStationCode) params.append('targetStationCode', targetStationCode);
+  if (targetStationSequence) params.append('targetStationSequence', String(targetStationSequence));
 
   return await apiRequest(`/api/v1/eta/predict?${params.toString()}`);
 }
 
 /**
- * Get raw live telemetry data from RailRadar
+ * Get raw live telemetry data with optional target destination station code
  */
-export async function getTrainLiveData(trainNumber) {
-  return await apiRequest(`/api/v1/eta/live/${encodeURIComponent(trainNumber)}`);
+export async function getTrainLiveData(trainNumber, targetStationCode = null) {
+  const query = targetStationCode ? `?targetStationCode=${encodeURIComponent(targetStationCode)}` : '';
+  return await apiRequest(`/api/v1/eta/live/${encodeURIComponent(trainNumber)}${query}`);
 }
 
 /**
@@ -129,9 +178,8 @@ export async function fetchCompleteTrainData(trainNumber, journeyDate, selectedT
   
   // 1. Try backend live API / routes first
   try {
-    // Parallel requests for optimal speed
     const [liveDataRes, realtimeRes, routeRes] = await Promise.allSettled([
-      getTrainLiveData(cleanTrainNo),
+      getTrainLiveData(cleanTrainNo, selectedTargetStationCode),
       getRealtimeStatus(cleanTrainNo, journeyDate),
       getTrainRoute(cleanTrainNo, journeyDate)
     ]);
@@ -140,30 +188,46 @@ export async function fetchCompleteTrainData(trainNumber, journeyDate, selectedT
     const realtime = realtimeRes.status === 'fulfilled' ? realtimeRes.value?.data : null;
     const routeData = routeRes.status === 'fulfilled' ? routeRes.value?.data : null;
 
-    // If we have live data from backend
     if (liveData && liveData.route && Array.isArray(liveData.route)) {
-      const stations = liveData.route.map((stn, idx) => ({
-        sequence: stn.sequence || idx + 1,
-        station_code: stn.stationCode || stn.station_code,
-        station_name: stn.stationName || stn.station_name,
-        distance: stn.distance || stn.distance_from_origin_km || 0,
-        scheduled_arrival: stn.scheduledArrival || stn.scheduled_arrival,
-        actual_arrival: stn.actualArrival || stn.actual_arrival,
-        scheduled_departure: stn.scheduledDeparture || stn.scheduled_departure,
-        actual_departure: stn.actualDeparture || stn.actual_departure,
-        delay_minutes: stn.delayMinutes ?? stn.delay_minutes ?? null,
-        status: stn.stationStatus || (stn.hasDeparted ? 'passed' : stn.isCurrent ? 'current' : 'upcoming')
-      }));
+      const stations = liveData.route.map((stn, idx) => {
+        const code = stn.stationCode || stn.station_code || '';
+        let lat = parseFloat(stn.latitude);
+        let lon = parseFloat(stn.longitude);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lon) || (lat === 0 && lon === 0)) {
+          const fallback = getStationCoords(code);
+          if (fallback) {
+            lat = fallback[0];
+            lon = fallback[1];
+          }
+        }
+
+        return {
+          sequence: stn.sequence || idx + 1,
+          station_code: code,
+          station_name: stn.stationName || stn.station_name || code,
+          distance: Number(stn.distance || stn.distanceFromOriginKm || stn.distance_from_source_km || 0),
+          distance_from_source_km: Number(stn.distance || stn.distanceFromOriginKm || stn.distance_from_source_km || 0),
+          latitude: Number.isFinite(lat) ? lat : null,
+          longitude: Number.isFinite(lon) ? lon : null,
+          scheduled_arrival: stn.scheduledArrival || stn.scheduled_arrival,
+          actual_arrival: stn.actualArrival || stn.actual_arrival,
+          scheduled_departure: stn.scheduledDeparture || stn.scheduled_departure,
+          actual_departure: stn.actualDeparture || stn.actual_departure,
+          delay_minutes: stn.delayMinutes ?? stn.delay_minutes ?? null,
+          is_halt: stn.isHalt !== undefined ? Boolean(stn.isHalt) : true,
+          status: stn.stationStatus || (stn.hasDeparted ? 'passed' : stn.isCurrent ? 'current' : 'upcoming')
+        };
+      });
 
       const currentLoc = liveData.currentLocation || {};
       const currentStationCode = currentLoc.stationCode || realtime?.current_station_code;
       const currentStn = stations.find(s => s.station_code === currentStationCode) || stations.find(s => s.status === 'current') || stations[0];
 
-      // Determine default target station (last station or user chosen)
       const upcomingStations = stations.filter(s => s.sequence > (currentStn?.sequence || 0));
-      const targetCode = selectedTargetStationCode || (upcomingStations.length > 0 ? upcomingStations[upcomingStations.length - 1].station_code : stations[stations.length - 1].station_code);
+      // Default to selected target or the route's final terminus station
+      const targetCode = selectedTargetStationCode || (upcomingStations.length > 0 ? upcomingStations[upcomingStations.length - 1].station_code : stations[stations.length - 1]?.station_code);
 
-      // Fetch dynamic ETA prediction
       let prediction = null;
       try {
         const predRes = await predictETA({
@@ -190,10 +254,13 @@ export async function fetchCompleteTrainData(trainNumber, journeyDate, selectedT
           station_code: currentStn?.station_code || '--',
           station_name: currentStn?.station_name || 'In Transit',
           station_sequence: currentStn?.sequence || 1,
+          latitude: parseFloat(currentLoc.latitude) || currentStn?.latitude,
+          longitude: parseFloat(currentLoc.longitude) || currentStn?.longitude,
           status: realtime?.status || 'IN_TRANSIT',
           delay_minutes: liveData.delayMinutes ?? currentLoc.delayMinutes ?? realtime?.delay_minutes ?? 0,
           speed_kmph: currentLoc.speedToNextStationKmph ?? realtime?.speed_kmph ?? 70,
           distance_from_origin_km: currentLoc.distanceFromOriginKm ?? currentStn?.distance ?? 0,
+          distance_from_source_km: currentLoc.distanceFromOriginKm ?? currentStn?.distance ?? 0,
           distance_remaining_km: (stations[stations.length - 1]?.distance || 0) - (currentLoc.distanceFromOriginKm || currentStn?.distance || 0),
           running_status: liveData.runningStatusMessage || (currentStn ? `Near ${currentStn.station_name}` : 'In Transit')
         },
@@ -219,22 +286,52 @@ export async function fetchCompleteTrainData(trainNumber, journeyDate, selectedT
 
   // 2. Fallback to rich realistic dataset if offline or demo train
   const fallback = FALLBACK_TRAIN_DATA[cleanTrainNo] || FALLBACK_TRAIN_DATA['12919'];
-  const stations = fallback.stations;
-  const currentStn = fallback.current_status;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isFuture = Boolean(journeyDate && journeyDate > todayStr);
+
+  const stations = fallback.stations.map((stn, idx) => ({
+    ...stn,
+    status: isFuture ? (idx === 0 ? 'current' : 'upcoming') : stn.status,
+    is_current_location: isFuture ? idx === 0 : (stn.status === 'current'),
+    actual_arrival: isFuture ? null : stn.actual_arrival,
+    actual_departure: isFuture ? null : stn.actual_departure,
+    delay_minutes: isFuture ? 0 : stn.delay_minutes
+  }));
+
   const targetCode = selectedTargetStationCode || stations[stations.length - 1].station_code;
+  const originStation = stations[0];
+  const terminusStation = stations[stations.length - 1];
+  const totalDist = Number(terminusStation.distance_from_source_km || terminusStation.distance || 0);
   
   const prediction = calculateLocalPrediction({
     ...fallback,
     train_number: cleanTrainNo,
-    journey_date: journeyDate
+    journey_date: journeyDate,
+    running_status: isFuture ? 'YET_TO_START' : fallback.current_status?.running_status,
+    stations
   }, targetCode);
 
   return {
     ...fallback,
-    isLive: false,
+    isLive: !isFuture,
     train_number: cleanTrainNo,
     journey_date: journeyDate,
     target_station_code: targetCode,
+    running_status: isFuture ? 'YET_TO_START' : (fallback.current_status?.status || 'IN_TRANSIT'),
+    current_status: isFuture ? {
+      station_code: originStation.station_code,
+      station_name: originStation.station_name,
+      station_sequence: 1,
+      status: 'SCHEDULED',
+      delay_minutes: 0,
+      speed_kmph: 0,
+      distance_from_origin_km: 0,
+      distance_from_source_km: 0,
+      distance_remaining_km: totalDist,
+      is_halt: true,
+      running_status: `Scheduled to depart from ${originStation.station_name} on ${originStation.scheduled_departure || 'Scheduled Time'}`
+    } : fallback.current_status,
+    stations,
     prediction
   };
 }

@@ -13,13 +13,30 @@ export function useTrainData(initialTrainNumber = '12919') {
   const [etaLoading, setEtaLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(null);
-  const [backendStatus, setBackendStatus] = useState({ isOnline: false, checked: false });
+  const [backendStatus, setBackendStatus] = useState({ isOnline: false, isConnected: false, isDemoMode: false, checked: false });
 
-  // Check health on mount
+  // Check health on mount and keep polling periodically
   useEffect(() => {
-    checkBackendHealth().then(status => {
-      setBackendStatus({ isOnline: status.isOnline, checked: true });
-    });
+    let mounted = true;
+    const verifyHealth = async () => {
+      const status = await checkBackendHealth();
+      if (mounted) {
+        setBackendStatus({
+          isOnline: status.isOnline,
+          isConnected: status.isConnected,
+          isDemoMode: status.isDemoMode,
+          checked: true,
+          data: status.data
+        });
+      }
+    };
+
+    verifyHealth();
+    const interval = setInterval(verifyHealth, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Main fetch function for entire train
@@ -35,6 +52,9 @@ export function useTrainData(initialTrainNumber = '12919') {
     try {
       const data = await fetchCompleteTrainData(trainNum, date, targetCode);
       setTrainData(data);
+      if (data.isLive) {
+        setBackendStatus(prev => ({ ...prev, isOnline: true, isConnected: true, isDemoMode: false, checked: true }));
+      }
       if (data.target_station_code && !targetCode) {
         setTargetStationCode(data.target_station_code);
       }

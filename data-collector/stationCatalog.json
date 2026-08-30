@@ -10498,10 +10498,10 @@
   "SBHR": {
     "station_code": "SBHR",
     "station_name": "Subrahmanya Road",
-    "city": "Nettana Railway Station",
+    "city": "Subrahmanya",
     "state": "Karnataka",
-    "latitude": 12.731272,
-    "longitude": 75.557615
+    "latitude": 12.678,
+    "longitude": 75.361
   },
   "SCL": {
     "station_code": "SCL",
@@ -33609,11 +33609,51 @@
   },
   "MAQ": {
     "station_code": "MAQ",
-    "station_name": "MANGALORE CNTL",
+    "station_name": "Mangaluru Central",
     "city": "Mangalore",
     "state": "Karnataka",
-    "latitude": 12.862325,
-    "longitude": 74.844068
+    "latitude": 12.8645,
+    "longitude": 74.8431
+  },
+  "MAJN": {
+    "station_code": "MAJN",
+    "station_name": "Mangaluru Junction",
+    "city": "Mangalore",
+    "state": "Karnataka",
+    "latitude": 12.8698,
+    "longitude": 74.8727
+  },
+  "BNTL": {
+    "station_code": "BNTL",
+    "station_name": "Bantawala",
+    "city": "Bantwal",
+    "state": "Karnataka",
+    "latitude": 12.8876,
+    "longitude": 75.0345
+  },
+  "KNYR": {
+    "station_code": "KNYR",
+    "station_name": "Kaniuru",
+    "city": "Kaniuru",
+    "state": "Karnataka",
+    "latitude": 12.7540,
+    "longitude": 75.3012
+  },
+  "KBPR": {
+    "station_code": "KBPR",
+    "station_name": "Kabaka Puttur",
+    "city": "Puttur",
+    "state": "Karnataka",
+    "latitude": 12.7667,
+    "longitude": 75.2014
+  },
+  "NRJ": {
+    "station_code": "NRJ",
+    "station_name": "Narimogaru",
+    "city": "Narimogaru",
+    "state": "Karnataka",
+    "latitude": 12.7210,
+    "longitude": 75.2530
   },
   "MBP": {
     "station_code": "MBP",

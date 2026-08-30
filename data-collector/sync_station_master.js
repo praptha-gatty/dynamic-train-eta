@@ -8,6 +8,20 @@ const supabase = createClient(
     process.env.SUPABASE_ANON_KEY
 );
 
+// Key South Western / Southern Railway & Malwa route stations to ensure synced
+const PRIORITY_STATIONS = [
+    "MAQ", "MAJN", "BNTL", "KNYR", "KBPR", "NRJ", "SBHR",
+    "SKLR", "HAS", "ASK", "MYS", "SBC", "YPR", "SMVB", "UBL",
+    "DWR", "BGM", "BAY", "SL", "UD", "KUDA", "BYNR", "BTJL",
+    "MRDW", "KT", "GOK", "ANKL", "KAWR", "MAO", "KGQ", "KZE",
+    "PAY", "CAN", "CLT", "SRR", "TCR", "ERS", "TVC", "MAS",
+    "INDB", "DWX", "UJN", "BPL", "BHS", "BAQ", "BINA", "LAR",
+    "BAB", "VGLB", "DBA", "GWL", "MRA", "AGC", "MTJ", "PWL",
+    "FDB", "NZM", "NDLS", "PNP", "KUN", "KKDE", "UMB", "RPJ",
+    "SIR", "KNN", "LDH", "PGW", "JRC", "JUC", "DZA", "MEX",
+    "PTKC", "KTHU", "JAT", "UHP", "MCTM", "SVDK"
+];
+
 async function syncStationsMaster() {
     console.log("\n==========================================");
     console.log("🚉 SYNCING SUPABASE STATIONS MASTER TABLE");
@@ -18,16 +32,17 @@ async function syncStationsMaster() {
         .from("stations")
         .select("station_code, station_name");
 
-    if (fetchErr) {
-        console.error("❌ Error fetching stations from DB:", fetchErr.message);
-        return;
-    }
+    const existingStations = dbStations || [];
+    console.log(`Found ${existingStations.length} existing station records in Supabase 'stations' table.`);
 
-    console.log(`Found ${dbStations.length} existing station records in Supabase 'stations' table.`);
+    // 2. Prepare merged station codes set
+    const stationCodeSet = new Set(existingStations.map(s => s.station_code));
+    PRIORITY_STATIONS.forEach(code => stationCodeSet.add(code));
 
-    // 2. Prepare enriched station records
-    const enrichedList = dbStations.map(s => {
-        const info = stationMaster.getStationInfo(s.station_code, s.station_name);
+    // 3. Prepare enriched station records
+    const enrichedList = Array.from(stationCodeSet).map(code => {
+        const existing = existingStations.find(s => s.station_code === code);
+        const info = stationMaster.getStationInfo(code, existing?.station_name);
         return {
             station_code: info.station_code,
             station_name: info.station_name,
@@ -36,9 +51,9 @@ async function syncStationsMaster() {
             latitude: info.latitude,
             longitude: info.longitude
         };
-    });
+    }).filter(s => s.latitude !== null && s.longitude !== null);
 
-    // 3. Upsert to Supabase in batches
+    // 4. Upsert to Supabase in batches
     console.log(`Upserting ${enrichedList.length} enriched station records...`);
     const BATCH_SIZE = 50;
     let updatedCount = 0;
@@ -56,17 +71,19 @@ async function syncStationsMaster() {
         }
     }
 
-    console.log(`✅ Successfully synced ${updatedCount} / ${dbStations.length} stations in Supabase!`);
+    console.log(`✅ Successfully synced ${updatedCount} stations in Supabase!`);
 
-    // 4. Verify updated stations
-    const { data: verifiedStations } = await supabase
+    // 5. Verify Southern / SWR stations in Supabase
+    const { data: verifiedStations, error: vErr } = await supabase
         .from("stations")
         .select("station_code, station_name, city, state, latitude, longitude")
-        .in("station_code", ["DADN", "INDB", "UJN", "BPL", "VGLJ", "GWL", "AGC", "MTJ", "NZM", "NDLS", "PNP", "UMB", "LDH", "JRC", "PTKC", "JAT", "SVDK"])
+        .in("station_code", ["MAQ", "MAJN", "BNTL", "KBPR", "NRJ", "KNYR", "SBHR"])
         .order("station_code");
 
-    console.log("\nSample Verified Key Stations in Supabase:");
-    console.table(verifiedStations);
+    if (!vErr && verifiedStations) {
+        console.log("\nVerified MAQ -> SBHR Corridor Stations in Supabase:");
+        console.table(verifiedStations);
+    }
 }
 
 syncStationsMaster().then(() => process.exit(0)).catch(err => {

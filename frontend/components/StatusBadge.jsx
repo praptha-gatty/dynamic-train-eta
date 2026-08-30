@@ -1,6 +1,17 @@
 import React from 'react';
 
 export function StatusBadge({ status, delayMinutes }) {
+  const isYetToStart = status === 'YET_TO_START' || status === 'SCHEDULED' || status === 'NOT_STARTED';
+
+  if (isYetToStart) {
+    return (
+      <span className="status-badge status-scheduled">
+        <span className="status-dot" style={{ backgroundColor: '#38bdf8' }} />
+        Scheduled Departure
+      </span>
+    );
+  }
+
   let label = status || 'IN_TRANSIT';
   let badgeClass = 'status-in-transit';
 
@@ -22,9 +33,6 @@ export function StatusBadge({ status, delayMinutes }) {
   } else if (status === 'COMPLETED') {
     label = 'Journey Completed';
     badgeClass = 'status-completed';
-  } else if (status === 'SCHEDULED') {
-    label = 'Scheduled';
-    badgeClass = 'status-scheduled';
   }
 
   return (
@@ -34,3 +42,5 @@ export function StatusBadge({ status, delayMinutes }) {
     </span>
   );
 }
+
+export default StatusBadge;

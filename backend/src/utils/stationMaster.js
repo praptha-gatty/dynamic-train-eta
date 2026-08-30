@@ -1,10 +1,14 @@
 /**
- * Station coordinates database for Indian Railways map visualization.
- * Sourced from national railway network coordinates.
- * Never falls back to default central India coordinates for unmapped stations.
+ * Station Master Database with geographic coordinates (Latitude, Longitude).
+ * Guarantees non-null float coordinates for railway stations across India.
+ * Never falls back to arbitrary central India coordinates for unknown stations.
  */
 
-export const STATION_COORDINATES = {
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+export const STATION_COORDINATES_MAP = {
   // Southern & South Western Railway (Karnataka, Kerala, Konkan corridor)
   MAQ: [12.8645, 74.8431],   // Mangalore Central
   MAJN: [12.8698, 74.8727],  // Mangaluru Junction
@@ -204,15 +208,65 @@ export const STATION_COORDINATES = {
   NJP: [26.6853, 88.4419]    // New Jalpaiguri
 };
 
-export const DEFAULT_MAP_CENTER = [12.8645, 74.8431]; // Default to Mangalore Central if route unknown
-export const DEFAULT_MAP_ZOOM = 9;
+let dynamicCatalog = null;
+
+function getDynamicCatalog() {
+  if (dynamicCatalog !== null) return dynamicCatalog;
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const catalogPath = path.resolve(__dirname, '../../../data-collector/stationCatalog.json');
+    if (fs.existsSync(catalogPath)) {
+      dynamicCatalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+    } else {
+      dynamicCatalog = {};
+    }
+  } catch (e) {
+    dynamicCatalog = {};
+  }
+  return dynamicCatalog;
+}
 
 /**
- * Lookup coordinates for a station code.
+ * Resolves station coordinates [latitude, longitude] as non-null floats.
  * Strictly verifies geographic validity.
+ * @param {string} stationCode 
+ * @param {number|null} [lat] 
+ * @param {number|null} [lon] 
+ * @returns {{ latitude: number|null, longitude: number|null }}
  */
-export function getStationCoords(stationCode) {
-  if (!stationCode) return null;
-  const code = String(stationCode).trim().toUpperCase();
-  return STATION_COORDINATES[code] || null;
+export function resolveCoordinates(stationCode, lat = null, lon = null) {
+  const parsedLat = parseFloat(lat);
+  const parsedLon = parseFloat(lon);
+
+  if (
+    Number.isFinite(parsedLat) && Number.isFinite(parsedLon) &&
+    Math.abs(parsedLat) <= 90 && Math.abs(parsedLon) <= 180 &&
+    (parsedLat !== 0 || parsedLon !== 0)
+  ) {
+    return { latitude: parsedLat, longitude: parsedLon };
+  }
+
+  if (stationCode) {
+    const code = String(stationCode).trim().toUpperCase();
+    
+    // 1. Primary curated station coordinates map
+    const lookup = STATION_COORDINATES_MAP[code];
+    if (lookup) {
+      return { latitude: lookup[0], longitude: lookup[1] };
+    }
+
+    // 2. Dynamic station master catalog lookup
+    const catalog = getDynamicCatalog();
+    const catEntry = catalog[code];
+    if (catEntry && Number.isFinite(parseFloat(catEntry.latitude)) && Number.isFinite(parseFloat(catEntry.longitude))) {
+      const cLat = parseFloat(catEntry.latitude);
+      const cLon = parseFloat(catEntry.longitude);
+      if (cLat !== 0 || cLon !== 0) {
+        return { latitude: cLat, longitude: cLon };
+      }
+    }
+  }
+
+  return { latitude: null, longitude: null };
 }

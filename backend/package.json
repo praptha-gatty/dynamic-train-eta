@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "jest --coverage",
+    "test": "node --test test/geoUtils.test.js test/timeUtils.test.js test/etaEngine.test.js test/cache.test.js test/api.test.js",
     "lint": "eslint src/",
     "db:migrate": "node src/db/migrate.js"
   },

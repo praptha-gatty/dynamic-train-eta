@@ -1,6 +1,7 @@
 import React from 'react';
-import { Clock, MapPin, Gauge, Navigation, Sparkles, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Clock, MapPin, Gauge, Navigation, AlertCircle, PauseCircle, CalendarClock } from 'lucide-react';
 import { formatTime, formatDelay, formatDistance, formatSpeed } from '../utils/formatters.js';
+import { getZeroSpeedHaltReason } from '../utils/haltReasons.js';
 
 export function EtaPredictionCard({
   trainData,
@@ -10,36 +11,56 @@ export function EtaPredictionCard({
 }) {
   if (!trainData) return null;
 
+  const isYetToStart = trainData.running_status === 'YET_TO_START' ||
+    trainData.current_status?.status === 'SCHEDULED' ||
+    Boolean(trainData.journey_date && trainData.journey_date > new Date().toISOString().split('T')[0]);
+
   const stations = trainData.stations || [];
   const currentStn = trainData.current_status || {};
   const currentSeq = currentStn.station_sequence || 1;
   const prediction = trainData.prediction;
 
-  // Filter stations for target selector (upcoming stations preferred, or all after origin)
   const targetOptions = stations.filter(s => s.sequence >= 1);
   const selectedTarget = stations.find(s => s.station_code === selectedTargetCode) || stations[stations.length - 1];
 
-  const estimatedTime = prediction?.estimated_arrival ? formatTime(prediction.estimated_arrival) : (selectedTarget?.actual_arrival ? formatTime(selectedTarget.actual_arrival) : '--');
-  const scheduledTime = selectedTarget?.scheduled_arrival ? formatTime(selectedTarget.scheduled_arrival) : (prediction?.scheduled_arrival ? formatTime(prediction.scheduled_arrival) : '--');
+  const estimatedTime = prediction?.estimated_arrival
+    ? formatTime(prediction.estimated_arrival)
+    : (selectedTarget?.actual_arrival ? formatTime(selectedTarget.actual_arrival) : (selectedTarget?.scheduled_arrival ? formatTime(selectedTarget.scheduled_arrival) : '--'));
 
-  const delayInfo = formatDelay(prediction?.estimated_delay_minutes ?? currentStn.delay_minutes);
-  const distanceRemaining = prediction?.distance_remaining_km ?? currentStn.distance_remaining_km;
-  const stationsRemaining = prediction?.stations_remaining ?? Math.max(0, (selectedTarget?.sequence || 0) - currentSeq);
-  const confidence = prediction?.confidence || (currentStn.speed_kmph > 60 ? 'high' : 'medium');
+  const scheduledTime = selectedTarget?.scheduled_arrival
+    ? formatTime(selectedTarget.scheduled_arrival)
+    : (prediction?.scheduled_arrival ? formatTime(prediction.scheduled_arrival) : '--');
+
+  const delayMinutes = isYetToStart ? 0 : Number(prediction?.predicted_delay_minutes ?? prediction?.estimated_delay_minutes ?? currentStn.delay_minutes ?? 0);
+  const delayInfo = isYetToStart
+    ? { text: 'On Time (Scheduled)', statusClass: 'on-time' }
+    : formatDelay(delayMinutes);
+
+  const distanceRemaining = prediction?.distance_remaining_km ?? currentStn.distance_remaining_km ?? (selectedTarget?.distance || 0);
+  const stationsRemaining = isYetToStart
+    ? stations.length
+    : (prediction?.stations_remaining ?? Math.max(0, (selectedTarget?.sequence || 0) - currentSeq));
+
+  const speed = isYetToStart ? 0 : (currentStn.speed_kmph ?? prediction?.effective_speed_kmph ?? 0);
+
+  const zeroSpeedHaltReason = isYetToStart
+    ? 'Awaiting Scheduled Departure'
+    : getZeroSpeedHaltReason({
+        speed,
+        isHalt: currentStn.is_halt,
+        stationName: currentStn.station_name,
+        stationCode: currentStn.station_code
+      });
 
   return (
     <article className="eta-prediction-card">
+      {/* Clean Top Header: Eyebrow + Destination Target Selector */}
       <div className="card-header">
-        <div className="header-badge-group">
-          <span className="ai-tag">
-            <Sparkles size={13} className="spark-icon" /> DYNAMIC ETA
-          </span>
-          <span className={`confidence-badge ${confidence}`}>
-            <ShieldCheck size={12} /> {confidence.toUpperCase()} CONFIDENCE
-          </span>
-        </div>
+        <span className="clean-eyebrow">
+          {isYetToStart ? 'TIMETABLE SCHEDULE' : 'DYNAMIC TRAIN ETA'}
+        </span>
 
-        {/* Target station dropdown */}
+        {/* Target station picker */}
         <div className="target-station-picker">
           <label htmlFor="target-select">
             <MapPin size={13} /> Destination / Target:
@@ -53,41 +74,45 @@ export function EtaPredictionCard({
           >
             {targetOptions.map((stn) => (
               <option key={`${stn.station_code}-${stn.sequence}`} value={stn.station_code}>
-                {stn.station_name} ({stn.station_code}) - {stn.distance ? `${stn.distance} km` : 'Stop'}
+                {stn.station_name} ({stn.station_code}) - {stn.distance ? `${stn.distance} km` : 'Halt'}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className="eta-main-content">
-        <div className="eta-primary-display">
-          <span className="eta-caption">Predicted Arrival Time</span>
-          <div className="eta-time-row">
-            <h2 className="eta-time-value">{estimatedTime}</h2>
-            {etaLoading && <span className="eta-recalc-badge">Updating...</span>}
+      {/* Clean 2-Column Arrival Summary Block */}
+      <div className="clean-arrival-grid">
+        {/* Left Column: Big Arrival Time */}
+        <div className="arrival-main-col">
+          <span className="arrival-headline-label">
+            {isYetToStart ? 'SCHEDULED DEPARTURE' : 'EXPECTED ARRIVAL'}
+          </span>
+          <div className="arrival-time-wrapper">
+            <h2 className="arrival-big-time">{estimatedTime}</h2>
+            {etaLoading && <span className="eta-recalc-pill">Recalculating...</span>}
           </div>
-          <p className="eta-target-summary">
+          <p className="arrival-target-location">
             At <strong>{selectedTarget?.station_name || selectedTargetCode}</strong> ({selectedTarget?.station_code || '--'})
           </p>
         </div>
 
-        <div className="eta-comparison-block">
-          <div className="compare-item">
-            <span className="compare-label">Scheduled Time</span>
-            <span className="compare-val scheduled">{scheduledTime}</span>
+        {/* Right Column: Timetable Comparison & Expected Delay Pill */}
+        <div className="arrival-comparison-col">
+          <div className="compare-mini-box">
+            <span className="mini-box-label">Scheduled Time</span>
+            <strong className="mini-box-val scheduled">{scheduledTime}</strong>
           </div>
-          <div className="compare-divider" />
-          <div className="compare-item">
-            <span className="compare-label">Expected Delay</span>
-            <span className={`compare-val delay ${delayInfo.statusClass}`}>
-              {delayInfo.text}
-            </span>
+          <div className="compare-mini-box">
+            <span className="mini-box-label">Status / Delay</span>
+            <strong className={`mini-box-val delay ${delayInfo.statusClass}`}>
+              {isYetToStart ? 'On Time' : (delayMinutes > 0 ? `+${delayMinutes} min delay` : delayInfo.text)}
+            </strong>
           </div>
         </div>
       </div>
 
-      {/* Dynamic ETA Telemetry Grid */}
+      {/* Clean 3 Metric Tiles Grid */}
       <div className="eta-telemetry-grid">
         <div className="telemetry-box">
           <div className="telemetry-icon-wrapper">
@@ -113,9 +138,16 @@ export function EtaPredictionCard({
           <div className="telemetry-icon-wrapper">
             <Gauge size={16} />
           </div>
-          <div>
+          <div className="telemetry-content-col">
             <span className="telemetry-title">Current Speed</span>
-            <strong className="telemetry-metric">{formatSpeed(currentStn.speed_kmph)}</strong>
+            <strong className="telemetry-metric">
+              {isYetToStart ? '0 km/h (Awaiting Departure)' : formatSpeed(speed)}
+            </strong>
+            {zeroSpeedHaltReason && (
+              <span className="speed-halt-subtext">
+                <PauseCircle size={11} className="halt-icon" /> {zeroSpeedHaltReason}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -123,9 +155,14 @@ export function EtaPredictionCard({
       <div className="eta-disclaimer-footer">
         <AlertCircle size={13} className="disclaimer-icon" />
         <span>
-          ETA is dynamically computed using live telemetry, current track speed ({formatSpeed(currentStn.speed_kmph)}), and historical delay progression.
+          {isYetToStart
+            ? `Train is scheduled for a future run on ${trainData.journey_date}. Official timetable schedule active.`
+            : 'ETA dynamically computed using live speed, distance remaining, track classification, and cascading delay models.'}
         </span>
       </div>
     </article>
   );
 }
+
+export const DynamicETACard = EtaPredictionCard;
+export default EtaPredictionCard;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, MapPin, CheckCircle, Radio, Clock, Target } from 'lucide-react';
+import { Search, CheckCircle, Radio, Target } from 'lucide-react';
 import { formatTime, formatDelay, formatDistance } from '../utils/formatters.js';
 
 export function StationTable({
@@ -19,7 +19,15 @@ export function StationTable({
     );
   }, [stations, filterQuery]);
 
-  const currentIdx = stations.findIndex(s => s.station_code === currentStationCode);
+  const currentIdx = useMemo(() => {
+    if (!currentStationCode) return 0;
+    const clean = String(currentStationCode).trim().toUpperCase();
+    const idx = stations.findIndex(s => String(s.station_code).trim().toUpperCase() === clean);
+    return idx >= 0 ? idx : 0;
+  }, [stations, currentStationCode]);
+
+  const currentStation = stations[currentIdx] || {};
+  const currentDelay = Number(currentStation.delay_minutes || 0);
 
   return (
     <div className="panel station-table-panel">
@@ -57,12 +65,49 @@ export function StationTable({
           </thead>
           <tbody>
             {filteredStations.map((stn, idx) => {
-              const isCurrent = stn.station_code === currentStationCode;
-              const isTarget = stn.station_code === targetStationCode;
-              const isPassed = currentIdx >= 0 && stn.sequence <= (stations[currentIdx]?.sequence || 0) && !isCurrent;
+              const stnCode = String(stn.station_code || '').trim().toUpperCase();
+              const isCurrent = stnCode === String(currentStationCode || '').trim().toUpperCase();
+              const isTarget = targetStationCode
+                ? stnCode === String(targetStationCode).trim().toUpperCase()
+                : idx === stations.length - 1;
+              const originalIndex = stations.findIndex(s => s.station_code === stn.station_code);
+              const isPassed = currentIdx >= 0 && originalIndex < currentIdx;
               const isUpcoming = !isPassed && !isCurrent;
-              
-              const delayInfo = formatDelay(stn.delay_minutes);
+
+              // Format Actual / Predicted without showing '--' for passed stations
+              const actualOrPredictedTime =
+                stn.actual_arrival ||
+                stn.actual_departure ||
+                stn.estimated_arrival ||
+                stn.scheduled_arrival;
+
+              // Formatted actual/predicted delay
+              let delayDisplay = '--';
+              let delayClass = 'muted';
+
+              if (stn.delay_minutes != null) {
+                const d = Number(stn.delay_minutes);
+                if (d > 0) {
+                  delayDisplay = `+${d}m`;
+                  delayClass = 'delayed';
+                } else if (d < 0) {
+                  delayDisplay = `${d}m`;
+                  delayClass = 'early';
+                } else {
+                  delayDisplay = 'On Time';
+                  delayClass = 'on-time';
+                }
+              } else if (isPassed) {
+                delayDisplay = 'On Time';
+                delayClass = 'on-time';
+              } else if (isCurrent) {
+                delayDisplay = currentDelay > 0 ? `+${currentDelay}m` : currentDelay < 0 ? `${currentDelay}m` : 'On Time';
+                delayClass = currentDelay > 0 ? 'delayed' : 'on-time';
+              } else if (isUpcoming) {
+                // Expected delay propagated from current delay
+                delayDisplay = currentDelay > 0 ? `+${currentDelay}m (est)` : 'On Time';
+                delayClass = currentDelay > 0 ? 'delayed' : 'on-time';
+              }
 
               return (
                 <tr
@@ -81,20 +126,20 @@ export function StationTable({
                   </td>
 
                   <td className="col-dist">
-                    <span className="dist-text">{formatDistance(stn.distance)}</span>
+                    <span className="dist-text">{formatDistance(stn.distance || stn.distance_from_source_km)}</span>
                   </td>
 
                   <td className="col-time">
                     <div className="time-stack">
-                      <span className="arr-time">Arr: {formatTime(stn.scheduled_arrival)}</span>
-                      <span className="dep-time">Dep: {formatTime(stn.scheduled_departure)}</span>
+                      <span className="arr-time">Arr: {formatTime(stn.scheduled_arrival || stn.scheduled_departure)}</span>
+                      <span className="dep-time">Dep: {formatTime(stn.scheduled_departure || stn.scheduled_arrival)}</span>
                     </div>
                   </td>
 
                   <td className="col-time">
                     <div className="time-stack highlighted">
                       <span className="actual-arr">
-                        {stn.actual_arrival ? formatTime(stn.actual_arrival) : (isUpcoming ? 'ETA computing' : '--')}
+                        {actualOrPredictedTime ? formatTime(actualOrPredictedTime) : '--'}
                       </span>
                       {stn.actual_departure && (
                         <span className="actual-dep">Dep: {formatTime(stn.actual_departure)}</span>
@@ -103,13 +148,9 @@ export function StationTable({
                   </td>
 
                   <td className="col-delay">
-                    {stn.delay_minutes != null ? (
-                      <span className={`delay-pill ${delayInfo.statusClass}`}>
-                        {delayInfo.minutes > 0 ? `+${delayInfo.minutes}m` : delayInfo.minutes === 0 ? 'RT' : `${delayInfo.minutes}m`}
-                      </span>
-                    ) : (
-                      <span className="delay-pill muted">--</span>
-                    )}
+                    <span className={`delay-pill ${delayClass}`}>
+                      {delayDisplay}
+                    </span>
                   </td>
 
                   <td className="col-status">
@@ -153,3 +194,6 @@ export function StationTable({
     </div>
   );
 }
+
+export const StationScheduleTable = StationTable;
+export default StationTable;

@@ -1,14 +1,19 @@
+/**
+ * Resilient HTTP Client with retry logic, exponential backoff, and jitter.
+ */
+
 import axios from 'axios';
 import logger from './logger.js';
 
 /**
- * Performs an HTTP GET request with explicit timeout limit and retry logic with exponential backoff.
+ * Performs an HTTP request with explicit timeout limit and retry logic with exponential backoff.
  * @param {string} url 
  * @param {object} [options={}] 
+ * @param {string} [options.method='GET']
  * @param {number} [options.timeout=5000] Timeout in milliseconds (default: 5s)
  * @param {number} [options.retries=3] Maximum number of retries (default: 3)
  * @param {number} [options.backoffMs=1000] Initial backoff in milliseconds (default: 1s)
- * @returns {Promise<any>} Response object or data
+ * @returns {Promise<any>} Axios Response object
  */
 export async function fetchWithRetry(url, options = {}) {
   const timeout = options.timeout || 5000;
@@ -34,6 +39,12 @@ export async function fetchWithRetry(url, options = {}) {
       const status = error.response?.status;
       const errorMessage = error.response?.data?.message || error.message;
 
+      // Do not retry on 4xx client errors (e.g., 404 Not Found, 400 Bad Request, 401 Unauthorized)
+      if (status && status >= 400 && status < 500) {
+        logger.warn(`API client request error ${status} for ${url}: ${errorMessage}`);
+        throw error;
+      }
+
       logger.warn(`API call failed (attempt ${attempt}/${maxRetries + 1}) to ${url}: ${errorMessage} [status: ${status || 'N/A'}]`);
 
       if (isLastAttempt) {
@@ -41,10 +52,14 @@ export async function fetchWithRetry(url, options = {}) {
         throw error;
       }
 
-      // Exponential backoff with jitter
-      const backoff = initialBackoff * Math.pow(2, attempt - 1) + Math.random() * 200;
-      logger.info(`Retrying in ${Math.round(backoff)}ms...`);
+      // Exponential backoff with full jitter: backoff = random_between(0, initialBackoff * 2^attempt)
+      const maxBackoff = initialBackoff * Math.pow(2, attempt - 1);
+      const backoff = Math.floor(Math.random() * maxBackoff) + 200;
+      
+      logger.info(`Retrying request to ${url} in ${backoff}ms...`);
       await new Promise(resolve => setTimeout(resolve, backoff));
     }
   }
 }
+
+export default fetchWithRetry;

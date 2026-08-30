@@ -16,3 +16,8 @@ data/reports/
 # Temporary/local files
 *.log
 .DS_Store
+__pycache__/
+*.pyc
+frontend/dist/
+frontend/.env
+backend/.env

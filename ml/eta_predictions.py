@@ -6,22 +6,27 @@ from datetime import datetime, timedelta, timezone
 import pytz
 from ml.ml_features import prepare_ml_features, IST, DEFAULT_SMOOTH_SPEED_KMPH
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "rf_eta_model.joblib")
+MODEL_PATHS = [
+    os.path.join(os.path.dirname(__file__), "models", "dynamic_train_eta_model.pkl"),
+    os.path.join(os.path.dirname(__file__), "models", "dynamic_train_eta_realistic_model.pkl"),
+    os.path.join(os.path.dirname(__file__), "models", "rf_eta_model.joblib")
+]
 
 class ETAPredictor:
-    def __init__(self, model_path=MODEL_PATH):
-        self.model_path = model_path
+    def __init__(self, model_paths=MODEL_PATHS):
+        self.model_paths = model_paths
         self.model = None
         self.load_model()
 
     def load_model(self):
-        if os.path.exists(self.model_path):
-            try:
-                self.model = joblib.load(self.model_path)
-            except Exception as e:
-                self.model = None
-        else:
-            self.model = None
+        for path in self.model_paths:
+            if os.path.exists(path):
+                try:
+                    self.model = joblib.load(path)
+                    return
+                except Exception:
+                    continue
+        self.model = None
 
     def predict_live_eta(self, train_history_df):
         """
@@ -33,7 +38,6 @@ class ETAPredictor:
 
         df_feat = prepare_ml_features(train_history_df)
 
-        # Feature columns expected by model
         feature_cols = [
             "station_sequence",
             "distance_from_origin_km",
@@ -54,7 +58,7 @@ class ETAPredictor:
             eff_speed = float(row.get("effective_speed_kmph", DEFAULT_SMOOTH_SPEED_KMPH))
 
             # Base physical horizon in minutes
-            base_travel_minutes = (dist_rem / eff_speed) * 60.0
+            base_travel_minutes = (dist_rem / max(10.0, eff_speed)) * 60.0
 
             if self.model and all(c in row for c in feature_cols):
                 try:
@@ -63,10 +67,10 @@ class ETAPredictor:
                 except Exception:
                     predicted_added_delay = 0.0
             else:
-                # Heuristic model fallback: delay decay/propagation
-                predicted_added_delay = current_delay * 0.8
+                # Heuristic model fallback: delay propagation with buffer recovery
+                predicted_added_delay = max(-current_delay * 0.2, current_delay * 0.05)
 
-            total_predicted_delay_minutes = int(round(current_delay + predicted_added_delay))
+            total_predicted_delay_minutes = int(round(max(0, current_delay + predicted_added_delay)))
             predicted_arrival_dt = now_ist + timedelta(minutes=base_travel_minutes + predicted_added_delay)
 
             predictions.append({
